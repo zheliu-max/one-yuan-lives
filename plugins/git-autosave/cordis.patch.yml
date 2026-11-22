@@ -1,0 +1,9 @@
+- insert:
+    - id: git-autosave
+      name: '@local/git-autosave'
+      config:
+        enabled: true
+        topLevelOnly: true
+        messagePrefix: dsh
+        includeStat: true
+        timeoutMs: 30000

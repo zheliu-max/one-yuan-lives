@@ -1,0 +1,15 @@
+# Dependencies and virtual environments
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local scratch output
+*.tmp
+.tmp/

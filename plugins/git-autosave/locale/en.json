@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Git auto-save",
+    "description": "Commits the Session working directory after every finished turn, so each task leaves a local checkpoint you can roll back to. Nothing is pushed and ignored files stay ignored.",
+    "detail": "docs/DETAIL.md"
+  }
+}
