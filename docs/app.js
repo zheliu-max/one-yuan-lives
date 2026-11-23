@@ -12,7 +12,7 @@
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
 
-  var SCREENS = ['cover', 'identity', 'setup', 'machine', 'reveal', 'ending', 'report'];
+  var SCREENS = ['cover', 'identity', 'setup', 'machine', 'replay', 'reveal', 'ending', 'report'];
   var INFLATION = 0.03;
   var NEAR_YEARS = 7;        // 近期：七年
   var NEAR_MONTHS = 84;      // 七年 × 12
@@ -480,6 +480,7 @@
     $('#barFill').style.width = (index / (SCREENS.length - 1) * 100) + '%';
     window.scrollTo(0, 0);
     if (name === 'machine') { prepareMachine(); }
+    if (name === 'replay') { playRecap(); }
     if (name === 'reveal') { drawStars(); }
     if (name === 'ending' || name === 'report') { ensureLedger(); }
     if (name === 'ending') { renderEnding(); }
@@ -1265,7 +1266,7 @@
   /** 下一个月。 */
   function nextMonth() {
     if (state.slider >= NEAR_MONTHS - 1) {
-      go('reveal');
+      go('replay');
       return;
     }
     state.slider = state.slider + 1;
@@ -1341,7 +1342,7 @@
       }
       state.slider = NEAR_MONTHS - 1;
       runNearTo(state.slider);
-      go('reveal');
+      go('replay');
       return;
     }
 
@@ -1379,6 +1380,87 @@
     if (state.timelineMode !== 'near') return;
     state.slider = Math.max(0, state.slider - 12);
     sync();
+  }
+
+  /* ---------- 回放：七年快放 ---------- */
+
+  var recapTimer = 0;
+
+  /** 把七年里值得回看的事整理成一串条目。 */
+  function buildRecapItems() {
+    var items = [];
+    for (var y = 1; y <= 7; y++) {
+      items.push({ kind: 'year', year: y });
+      var picked = [];
+      var seen = {};
+      state.near.events.forEach(function (e) {
+        if (e.y !== y) return;
+        var kind = null;
+        if (typeof e.t === 'string' && e.t.indexOf('去了') === 0) kind = 'trip';
+        else if (e.accident) kind = 'accident';
+        else if (e.special && e.chosen === true) kind = 'spend';
+        else if (e.special && e.chosen === false) kind = 'skip';
+        if (!kind) return;
+        var key = kind + ':' + e.t;
+        if (seen[key]) return;
+        seen[key] = 1;
+        picked.push({ kind: kind, text: e.t, amt: e.amt, note: e.note });
+      });
+      picked.slice(0, 3).forEach(function (p) { items.push(p); });
+    }
+    return items;
+  }
+
+  /** 播放回放；结束或跳过后进入反转幕。 */
+  function playRecap() {
+    clearInterval(recapTimer);
+    var items = buildRecapItems();
+    var feed = $('#recapFeed');
+    feed.innerHTML = '';
+    $('#recapBar').style.width = '0%';
+    $('#recapYear').textContent = '第 1 年';
+    $('#recapTotal').textContent = '0';
+
+    var finalTotal = nearPocketTotal();
+    var idx = 0;
+    var tick = function () {
+      if (idx >= items.length) {
+        clearInterval(recapTimer);
+        recapTimer = setTimeout(function () { go('reveal'); }, 900);
+        return;
+      }
+      var item = items[idx];
+      if (item.kind === 'year') {
+        $('#recapYear').textContent = '第 ' + item.year + ' 年';
+      } else {
+        var row = document.createElement('div');
+        row.className = 'recap-item ' + item.kind;
+        var icon = item.kind === 'trip' ? '🎒'
+          : item.kind === 'accident' ? '⚠️'
+            : item.kind === 'skip' ? '🚫' : '✅';
+        var label = item.kind === 'skip' ? item.text + '（你放弃了）' : item.text;
+        var amt = item.amt ? (item.amt > 0 ? '+' : '−') + fmtMoney(Math.abs(item.amt)) : '';
+        row.innerHTML = '<span>' + icon + ' ' + label + '</span><span class="r-amt">' + amt + '</span>';
+        feed.appendChild(row);
+        // 只保留最近 5 条，旧的变淡
+        var rows = feed.querySelectorAll('.recap-item');
+        for (var i = 0; i < rows.length; i++) {
+          rows[i].classList.toggle('dim', i < rows.length - 3);
+        }
+        if (rows.length > 6) rows[0].remove();
+      }
+      idx++;
+      $('#recapBar').style.width = Math.round(idx / items.length * 100) + '%';
+      $('#recapTotal').textContent = fmtMoney(finalTotal * idx / items.length);
+    };
+    tick();
+    recapTimer = setInterval(tick, 420);
+  }
+
+  function skipRecap() {
+    clearInterval(recapTimer);
+    recapTimer = 0;
+    go('reveal');
   }
 
   /* ---------- 星图 ---------- */
@@ -1809,6 +1891,8 @@
     $('#amount').addEventListener('blur', function () { readInputs(true); });
 
     // 暂停 / 账本抽屉 / 收入明细
+    $('#recapSkip').addEventListener('click', skipRecap);
+
     $('#pauseBtn').addEventListener('click', function () {
       state.autoPaused = !state.autoPaused;
       if (state.autoPaused) cancelAdvance(); else maybeAdvance();
@@ -1846,7 +1930,7 @@
         }
         if ((state.slider % 12) === 11) {
           // 学年末
-          if (state.slider >= NEAR_MONTHS - 1) { go('reveal'); return; }
+          if (state.slider >= NEAR_MONTHS - 1) { go('replay'); return; }
           nextYear();
           return;
         }

@@ -693,6 +693,79 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   .season-layer { display: none; }
 }
 
+/* 回放卡 */
+.recap-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 10px 26px rgba(90, 64, 36, .08);
+  margin-bottom: 12px;
+}
+.recap-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+.recap-year {
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 19px;
+  font-weight: 600;
+}
+.recap-total { font-size: 12px; color: var(--ink-soft); }
+.recap-total b {
+  margin-left: 6px;
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 18px;
+  color: var(--warm);
+  font-variant-numeric: tabular-nums;
+}
+.recap-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 168px;
+  padding-top: 10px;
+  overflow: hidden;
+}
+.recap-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #4a4038;
+  animation: recapIn .32s cubic-bezier(.2, .7, .3, 1);
+}
+.recap-item.dim { opacity: .38; }
+.recap-item .r-amt { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.recap-item.trip { color: #8a4a1c; font-weight: 600; }
+.recap-item.trip .r-amt { color: var(--warm); }
+.recap-item.accident { color: #b3402c; font-weight: 600; }
+.recap-item.accident .r-amt { color: #b3402c; }
+.recap-item.skip { color: #9a8b78; }
+.recap-item.spend .r-amt { color: var(--warm); }
+@keyframes recapIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.recap-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #e3d5c1;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.recap-bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--warm));
+  transition: width .3s linear;
+}
+
 /* 五口袋 */
 .pocket-bar {
   display: flex;

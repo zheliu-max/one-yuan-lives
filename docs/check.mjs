@@ -74,6 +74,13 @@ check('v3 有季节粒子层', html.includes('id="seasonLayer"') && css.includes
 const flavorMonths = [...((js.match(/var FLAVOR = \{([\s\S]*?)\n  \};/) || [])[1] || '').matchAll(/^\s+(\d+):/gm)].length
 check('v3 每月都有旁白（12 个月）', flavorMonths === 12, `实际 ${flavorMonths}`)
 
+// v3.1：回放
+check('回放屏存在', html.includes('data-screen="replay"'))
+check('回放条目容器', html.includes('id="recapFeed"'))
+check('回放可跳过', html.includes('id="recapSkip"') && js.includes('function skipRecap'))
+check('回放有播放逻辑', js.includes('function playRecap') && js.includes('function buildRecapItems'))
+check('回放结束进入反转', js.includes("go('reveal')"))
+
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
 const fvSingle = (p, r, n) => p * Math.pow(1 + r, n)
