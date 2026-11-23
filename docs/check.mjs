@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const dir = join(process.cwd(), 'demo')
+const dir = join(process.cwd(), 'docs')
 const failures = []
 const check = (name, ok, detail) => {
   if (ok) console.log(`PASS ${name}`)

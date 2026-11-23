@@ -40,7 +40,7 @@
 纯静态页面：**零依赖、零构建、零网络请求**，断网也能完整演完。
 
 ```
-demo/
+docs/
   index.html   八幕结构与全部文案
   styles.css   纸张 / 暖光 / 宋体视觉语言
   app.js       身份、双模式账本、意外掷骰、三线、海报
@@ -51,13 +51,13 @@ demo/
 本地预览：
 
 ```bash
-node demo/serve.mjs     # http://127.0.0.1:4173/
-node demo/check.mjs     # 结构自检
+node docs/serve.mjs     # http://127.0.0.1:4173/
+node docs/check.mjs     # 结构自检
 ```
 
 ## 部署
 
-推送到 `main` 后由 GitHub Actions 自动发布 `demo/` 到 GitHub Pages（见 `.github/workflows/pages.yml`）。
+`docs/` 目录即发布内容，GitHub Pages 从 `main` 分支的 `/docs` 直接提供，无需构建步骤。推送到 `main` 后自动更新。
 
 ## 数据说明
 

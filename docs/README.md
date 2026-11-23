@@ -13,10 +13,10 @@ http://127.0.0.1:4173/
 服务器没在跑时：
 
 ```powershell
-node demo/serve.mjs
+node docs/serve.mjs
 ```
 
-也可以直接双击 `demo/index.html`（file:// 打开同样能跑）。
+也可以直接双击 `docs/index.html`（file:// 打开同样能跑）。
 
 ## 八幕
 
@@ -64,7 +64,7 @@ index.html?choice=invest&mode=near&y=84#report
 ## 目录
 
 ```
-demo/
+docs/
   index.html   八幕结构与全部文案
   styles.css   纸张 / 暖光 / 宋体 / chips / 五口袋 / 三线
   app.js       身份、双模式账本、意外掷骰、三线、海报、视频预留
@@ -76,7 +76,7 @@ demo/
 ## 自检
 
 ```powershell
-node demo/check.mjs
+node docs/check.mjs
 ```
 
 检查文件齐全、`app.js` 引用的 id 都存在、class 都有样式、八屏顺序与 `SCREENS` 一致、复利公式与方案数字对齐、无外部地址（离线可用）。
