@@ -5,10 +5,12 @@ import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { networkInterfaces } from 'node:os'
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)))
 const PORT = Number(process.env.PORT) || 4173
-const HOST = process.env.HOST || '127.0.0.1'
+// 默认监听所有网卡：电脑上的其他设备（手机/平板）在同一 WiFi 下可直接访问
+const HOST = process.env.HOST || '0.0.0.0'
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -76,5 +78,20 @@ const server = createServer(async (request, response) => {
 })
 
 server.listen(PORT, HOST, () => {
-  console.log(`一块钱的两万种人生 · demo 已启动 → http://${HOST}:${PORT}/`)
+  // 打印本机所有 IPv4 地址，方便手机直接访问
+  const nets = networkInterfaces()
+  const addresses = []
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) addresses.push(net.address)
+    }
+  }
+  console.log('一块钱的两万种人生 · demo 已启动')
+  console.log(`  本机打开  → http://127.0.0.1:${PORT}/`)
+  for (const addr of addresses) {
+    console.log(`  手机打开  → http://${addr}:${PORT}/`)
+  }
+  if (addresses.length === 0) {
+    console.log('  (未检测到局域网 IPv4 地址：请确认电脑已连 WiFi，或手动用 `ipconfig` 查 IP)')
+  }
 })
