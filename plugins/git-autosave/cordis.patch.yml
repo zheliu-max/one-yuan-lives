@@ -7,3 +7,4 @@
         messagePrefix: dsh
         includeStat: true
         timeoutMs: 30000
+        push: true

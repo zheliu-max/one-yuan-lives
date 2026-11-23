@@ -266,6 +266,71 @@ try {
     check('queue: no lock or index warning', !log.some((l) => l.startsWith('warn')), log.join(' | '))
     check('queue: clean afterwards', status.out === '', status.out)
   }
+  // Scrolling scaffolding messages never become the commit subject.
+  {
+    const repo = await makeRepo('scaffold')
+    const log = []
+    const { ctx, fire } = fakeCtx(log)
+    mod.apply(ctx, {})
+    const session = {
+      id: '4f1c2a90-0000-4000-8000-000000000002',
+      header: { cwd: repo, origin: 'user' },
+      deriveMessages: () => [
+        { role: 'user', content: [{ type: 'text', text: '把海报的标题改大一点' }] },
+        { role: 'user', content: [{ type: 'text', text: 'Time sampled while preparing turn 3, step 1: 2026-11-23T22:22:19+08:00' }] },
+        { role: 'user', content: [{ type: 'text', text: '<system-reminder>long policy text</system-reminder>' }] },
+      ],
+    }
+    writeFileSync(join(repo, 's.txt'), 's\n')
+    fire(session, { type: 'turn/end', data: { turn: 3 } })
+    const result = await settle(repo, 2)
+    check('scaffold: subject comes from the real request', result.subject === 'dsh: 把海报的标题改大一点', result.subject)
+  }
+
+  // `push: true` against an unreachable remote must never lose the commit.
+  //
+  // A local-path remote cannot be exercised inside this sandbox: git runs the
+  // receive-pack side through sh.exe, and the sandbox denies the anonymous
+  // pipe that needs. The reachable case (HTTPS to GitHub) is verified against
+  // the real remote, not here; what this case pins down is the failure path —
+  // commit kept locally, one warning that names the push, nothing thrown.
+  {
+    const bare = join(mkdtempSync(join(tmpdir(), 'git-autosave-remote-')), 'remote.git')
+    created.push(bare)
+    await sh(join(bare, '..'), ['init', '--bare', '-q', bare])
+    const repo = await makeRepo('push')
+    await sh(repo, ['remote', 'add', 'origin', bare])
+
+    const log = []
+    const { ctx, fire } = fakeCtx(log)
+    mod.apply(ctx, { push: true })
+    writeFileSync(join(repo, 'pushed.txt'), 'p\n')
+    fire(sessionFor(repo), { type: 'turn/end', data: { turn: 4 } })
+
+    const result = await settle(repo, 2)
+    // 推送在提交之后异步进行：等它落定（成功或失败）再断言日志
+    for (let i = 0; i < 60; i++) {
+      if (log.some((l) => l.includes('push failed') || l.includes('pushed '))) break
+      await sleep(100)
+    }
+    const status = await sh(repo, ['status', '--porcelain'])
+    check('push: commit survives an unreachable remote', result.count === 2, `count=${result.count}`)
+    check('push: work tree stays clean', status.out === '', status.out)
+    check('push: failure is reported as a warning', log.some((l) => l.startsWith('warn') && l.includes('push failed')), log.join(' | '))
+  }
+
+  // Without a remote, `push: true` stays quiet and keeps the commit local.
+  {
+    const repo = await makeRepo('no-remote')
+    const log = []
+    const { ctx, fire } = fakeCtx(log)
+    mod.apply(ctx, { push: true })
+    writeFileSync(join(repo, 'local.txt'), 'l\n')
+    fire(sessionFor(repo), { type: 'turn/end', data: { turn: 5 } })
+    const result = await settle(repo, 2)
+    check('no remote: commit still created', result.count === 2, `count=${result.count}`)
+    check('no remote: no warning raised', !log.some((l) => l.startsWith('warn')), log.join(' | '))
+  }
 } finally {
   rmSync(scratch, { recursive: true, force: true })
   for (const dir of created) rmSync(dir, { recursive: true, force: true })

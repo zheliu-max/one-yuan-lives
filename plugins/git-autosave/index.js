@@ -34,6 +34,7 @@ const DEFAULTS = {
   timeoutMs: 30_000,
   messagePrefix: 'dsh',
   includeStat: true,
+  push: false,
 }
 
 /**
@@ -49,6 +50,7 @@ function readConfig(raw) {
     topLevelOnly: source.topLevelOnly === undefined ? DEFAULTS.topLevelOnly : Boolean(source.topLevelOnly),
     timeoutMs: Number.isSafeInteger(source.timeoutMs) && source.timeoutMs > 0 ? source.timeoutMs : DEFAULTS.timeoutMs,
     includeStat: source.includeStat === undefined ? DEFAULTS.includeStat : Boolean(source.includeStat),
+    push: source.push === undefined ? DEFAULTS.push : Boolean(source.push),
     messagePrefix: typeof source.messagePrefix === 'string' && source.messagePrefix.trim() !== ''
       ? source.messagePrefix.trim()
       : DEFAULTS.messagePrefix,
@@ -71,10 +73,30 @@ function contentText(content) {
 }
 
 /**
- * Derive a one-line commit subject from the last user message of the Session,
- * which identifies the task the turn belongs to far better than a timestamp.
- * Reading derived history is best-effort: any projection failure falls back to
- * the timestamp subject.
+ * Harness-injected scaffolding arrives as user-role messages (time context,
+ * reminders, policy notes). They describe the session, not the task, so they
+ * must never become the commit subject.
+ */
+const SCAFFOLDING = [
+  /^time sampled/i,
+  /^current (working directory|dsh file policy)/i,
+  /^browser time zone/i,
+  /^<system-reminder>/i,
+  /^approval prompts are enabled/i,
+  /^you are the root agent/i,
+  /^agent teams is available/i,
+]
+
+/** Whether a user-role message is harness scaffolding rather than a request. */
+function isScaffolding(text) {
+  return SCAFFOLDING.some((pattern) => pattern.test(text))
+}
+
+/**
+ * Derive a one-line commit subject from the last real user message of the
+ * Session, which identifies the task the turn belongs to far better than a
+ * timestamp. Reading derived history is best-effort: any projection failure
+ * falls back to the timestamp subject.
  * @param session - the Session whose turn just ended.
  * @returns a shortened subject, or an empty string.
  */
@@ -90,7 +112,7 @@ function subjectFor(session) {
     const message = messages[index]
     if (message === null || typeof message !== 'object' || message.role !== 'user') continue
     const text = contentText(message.content).replace(/\s+/g, ' ').trim()
-    if (text === '') continue
+    if (text === '' || isScaffolding(text)) continue
     return text.length > SUBJECT_MAX_LENGTH ? `${text.slice(0, SUBJECT_MAX_LENGTH - 1)}…` : text
   }
   return ''
@@ -243,6 +265,39 @@ export function apply(ctx, config) {
     }
     const sessionId = typeof session?.id === 'string' ? session.id.slice(0, 8) : 'unknown'
     log('info', `git-autosave: committed ${cwd} for session ${sessionId}${stat === '' ? '' : ` (${stat})`}`)
+
+    if (settings.push) await pushRemote(git, cwd)
+  }
+
+  /**
+   * Push the current branch to its upstream after a commit. A repository with
+   * no remote, or a branch with no upstream, is skipped quietly: this plugin
+   * must never turn a local-only workspace into an error surface. Authentication
+   * comes from the host's git credential helper because the subprocess seam
+   * scrubs credentials from the environment and prompting is disabled.
+   * @param git - resolved executable.
+   * @param cwd - the working directory that owns the repository.
+   */
+  const pushRemote = async (git, cwd) => {
+    const remotes = await runGit(git, ['remote'], cwd)
+    if (remotes.exitCode !== 0 || remotes.stdout.trim() === '') {
+      log('debug', `git-autosave: ${cwd} has no git remote; commit kept local`)
+      return
+    }
+
+    const branch = await runGit(git, ['rev-parse', '--abbrev-ref', 'HEAD'], cwd)
+    const name = branch.stdout.trim()
+    if (branch.exitCode !== 0 || name === '' || name === 'HEAD') {
+      log('debug', `git-autosave: ${cwd} is on a detached HEAD; commit kept local`)
+      return
+    }
+
+    const pushed = await runGit(git, ['push', '--quiet', 'origin', name], cwd)
+    if (pushed.exitCode !== 0) {
+      log('warn', `git-autosave: commit kept local, push failed in ${cwd}: ${(pushed.stderr.trim() || pushed.stdout.trim()).slice(0, 300)}`)
+      return
+    }
+    log('info', `git-autosave: pushed ${name} from ${cwd}`)
   }
 
   const chains = new Map()
