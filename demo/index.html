@@ -43,23 +43,77 @@
     </div>
 
     <h1 class="title">一块钱<em>的两万种人生</em></h1>
-    <p class="lede">三十年后，它会变成什么？<br>没有人知道。但每一块钱都替你记着。</p>
+    <p class="lede">同一笔钱，五种活法。<br>你只走了其中一种。</p>
 
     <div class="facts" aria-hidden="true">
-      <span>30 年</span>
-      <span>约 21,900 次选择</span>
-      <span>你只走了其中一条</span>
+      <span>近期 · 七年账本</span>
+      <span>长期 · 三十年</span>
+      <span>五类去向 · 互相转化</span>
     </div>
 
-    <button class="btn" data-go="setup">走进这三十年</button>
-    <p class="fineprint">全程约 3 分钟 · 不用登录 · 可以随时重来</p>
+    <button class="btn" data-go="identity">走进这三十年</button>
+    <p class="fineprint">全程约 4 分钟 · 不用登录 · 可以随时重来</p>
   </section>
 
-  <!-- 第二幕 · 输入 -->
+  <!-- 第二幕 · 身份定制 -->
+  <section class="screen" data-screen="identity">
+    <p class="kicker">先认识你</p>
+    <h2 class="step-title">这部机器想替你算，<br>就得先知道你。</h2>
+    <p class="step-sub">你的学校、年级、专业——会影响后面每一次换算。</p>
+
+    <div class="fields">
+      <div class="field-group">
+        <span class="field-label">你现在是</span>
+        <div class="chips" id="gradeChips" role="radiogroup" aria-label="年级">
+          <button class="chip" data-grade="freshman">大一</button>
+          <button class="chip" data-grade="sophomore">大二</button>
+          <button class="chip" data-grade="junior">大三</button>
+          <button class="chip" data-grade="senior">大四</button>
+          <button class="chip" data-grade="grad">研究生</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">你的学校</span>
+        <div class="chips" id="schoolChips" role="radiogroup" aria-label="学校">
+          <button class="chip" data-school="nju">南京大学</button>
+          <button class="chip" data-school="nj">南京其他高校</button>
+          <button class="chip" data-school="other">其他城市</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">你的专业大类</span>
+        <div class="chips" id="majorChips" role="radiogroup" aria-label="专业大类">
+          <button class="chip" data-major="stem">理工</button>
+          <button class="chip" data-major="econ">经管</button>
+          <button class="chip" data-major="human">文史</button>
+          <button class="chip" data-major="med">医药</button>
+          <button class="chip" data-major="art">艺术</button>
+          <button class="chip" data-major="other">其他</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">每月生活费（家里给 + 自己挣，大约）</span>
+        <div class="chips" id="budgetChips" role="radiogroup" aria-label="生活费">
+          <button class="chip" data-budget="1200">约 1,200（紧）</button>
+          <button class="chip" data-budget="1800">约 1,800</button>
+          <button class="chip" data-budget="2500">约 2,500</button>
+          <button class="chip" data-budget="3500">约 3,500+</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint" id="identityHint">这些只用来定制计算，不保存任何信息。</p>
+    <button class="btn" id="identityNext" disabled>继续</button>
+  </section>
+
+  <!-- 第三幕 · 一笔钱 -->
   <section class="screen" data-screen="setup">
-    <p class="kicker">第一幕 · 一块钱的开端</p>
-    <h2 class="step-title">你站在奶茶店门口，<br>手里攥着 <span class="hl" id="amountEcho">15</span> 元。</h2>
-    <p class="step-sub">这笔钱小到不值得记一笔。它正好适合用来讲一个三十年的故事。</p>
+    <p class="kicker" id="setupKicker">第一笔钱</p>
+    <h2 class="step-title" id="setupTitle">你站在奶茶店门口，<br>手里攥着 <span class="hl" id="amountEcho">15</span> 元。</h2>
+    <p class="step-sub">钱本身很小。但它是一天里「花了就没了」和「换种放法」的分界。</p>
 
     <label class="field">
       <span class="field-label">今天你随手花掉的</span>
@@ -69,22 +123,24 @@
       </span>
     </label>
 
-    <label class="field">
-      <span class="field-label">你今年</span>
-      <span class="field-input">
-        <input id="age" type="number" min="12" max="70" step="1" value="25" inputmode="numeric" autocomplete="off">
-        <span class="suffix">岁</span>
-      </span>
-    </label>
-
     <p class="hint" id="setupHint">每天一杯，一年就是 5,475 元。</p>
 
-    <button class="btn" data-go="fork">把它放进时间机器</button>
+    <div class="field-group">
+      <span class="field-label">你觉得自己能坚持存钱几年？（这决定曲线会不会中途断掉）</span>
+      <div class="chips" id="habitChips" role="radiogroup" aria-label="坚持年数">
+        <button class="chip" data-habit="3">3 年</button>
+        <button class="chip" data-habit="5">5 年</button>
+        <button class="chip" data-habit="10">10 年</button>
+        <button class="chip" data-habit="forever">一直坚持</button>
+      </div>
+    </div>
+
+    <button class="btn" data-go="fork">看看这笔钱的三条路</button>
   </section>
 
-  <!-- 第三幕 · 岔路 -->
+  <!-- 第四幕 · 岔路 -->
   <section class="screen" data-screen="fork">
-    <p class="kicker">第二幕 · 两万种人生</p>
+    <p class="kicker">第二幕 · 三种人生</p>
     <h2 class="step-title">钱只有一笔，<br>路有三条。</h2>
     <p class="step-sub">选一条。没有正确答案，只有不同的三十年。</p>
 
@@ -95,7 +151,7 @@
         </span>
         <span class="card-body">
           <b>喝掉这杯奶茶</b>
-          <small>现在就要。</small>
+          <small>换成一段记忆。</small>
         </span>
         <span class="card-go" aria-hidden="true">→</span>
       </button>
@@ -106,7 +162,7 @@
         </span>
         <span class="card-body">
           <b>存起来，定投</b>
-          <small>交给时间。</small>
+          <small>换成更多的钱。</small>
         </span>
         <span class="card-go" aria-hidden="true">→</span>
       </button>
@@ -117,68 +173,41 @@
         </span>
         <span class="card-body">
           <b>买一本二手书</b>
-          <small>交给以后的自己。</small>
+          <small>换成更强的自己。</small>
         </span>
         <span class="card-go" aria-hidden="true">→</span>
       </button>
     </div>
 
-    <p class="fineprint">这三条路，是我们替你摆出来的。<br>真实的人生里，没人会先给你看选项。</p>
+    <p class="fineprint">这三条路，只是五类去向的三种原型。<br>真实人生里，钱会在它们之间来回倒。</p>
   </section>
 
-  <!-- 第四幕 · 时间机器 -->
+  <!-- 第五幕 · 时间机器（双模式） -->
   <section class="screen" data-screen="machine">
     <p class="kicker" id="machineKicker">第三幕 · 时间机器</p>
 
-    <div class="stage" aria-hidden="true">
-      <svg class="scene scene-plant" viewBox="0 0 200 200" id="plantSvg">
-        <path class="ground" d="M30 186h140" />
-        <path class="stem" d="M100 186V96" pathLength="100"/>
-        <path class="branch" d="M100 150c-16-4-27-14-30-28" pathLength="100"/>
-        <path class="branch" d="M100 138c15-3 26-12 30-25" pathLength="100"/>
-        <path class="branch" d="M100 120c-13-3-22-11-25-22" pathLength="100"/>
-        <path class="branch" d="M100 108c13-3 22-10 25-20" pathLength="100"/>
-        <g class="leaves">
-          <ellipse class="leaf" data-year="2" cx="70" cy="122" rx="9" ry="5.5" transform="rotate(-28 70 122)"/>
-          <ellipse class="leaf" data-year="3" cx="130" cy="113" rx="9" ry="5.5" transform="rotate(26 130 113)"/>
-          <ellipse class="leaf" data-year="5" cx="75" cy="98" rx="8" ry="5" transform="rotate(-30 75 98)"/>
-          <ellipse class="leaf" data-year="7" cx="125" cy="88" rx="8" ry="5" transform="rotate(28 125 88)"/>
-          <ellipse class="leaf" data-year="9" cx="84" cy="80" rx="7.5" ry="4.6" transform="rotate(-34 84 80)"/>
-          <ellipse class="leaf" data-year="12" cx="116" cy="72" rx="7.5" ry="4.6" transform="rotate(30 116 72)"/>
-          <ellipse class="leaf" data-year="15" cx="92" cy="64" rx="7" ry="4.2" transform="rotate(-38 92 64)"/>
-          <ellipse class="leaf" data-year="18" cx="108" cy="58" rx="7" ry="4.2" transform="rotate(34 108 58)"/>
-          <ellipse class="leaf" data-year="22" cx="86" cy="52" rx="6.5" ry="4" transform="rotate(-42 86 52)"/>
-          <ellipse class="leaf" data-year="26" cx="114" cy="48" rx="6.5" ry="4" transform="rotate(38 114 48)"/>
-          <ellipse class="leaf" data-year="30" cx="100" cy="42" rx="6" ry="3.6"/>
-        </g>
-      </svg>
+    <div class="mode-seg" role="group" aria-label="时间模式">
+      <button class="mode-item is-on" data-mode="near">近期 · 七年账本</button>
+      <button class="mode-item" data-mode="far">长期 · 三十年</button>
+    </div>
 
-      <svg class="scene scene-cup" viewBox="0 0 200 200">
-        <g class="cup">
-          <path d="M64 80h72l-7 78a14 14 0 0 1-14 12H85a14 14 0 0 1-14-12z" fill="#f3e3cd" stroke="#b07a4a" stroke-width="3"/>
-          <path d="M64 96h72" stroke="#b07a4a" stroke-width="2" opacity=".45"/>
-          <g class="steam" stroke="#c9a37a" stroke-width="3" stroke-linecap="round" fill="none">
-            <path d="M88 66c6-8-4-14 2-22"/>
-            <path d="M102 64c6-8-4-14 2-22"/>
-            <path d="M116 66c6-8-4-14 2-22"/>
-          </g>
-        </g>
-      </svg>
+    <div class="stage" aria-hidden="true" id="nearStage">
+      <div class="pocket-bar" aria-hidden="true">
+        <div class="pocket-seg" id="pocketMoney"></div>
+        <div class="pocket-seg" id="pocketSkill"></div>
+        <div class="pocket-seg" id="pocketMemory"></div>
+        <div class="pocket-seg" id="pocketRelation"></div>
+        <div class="pocket-seg" id="pocketFreedom"></div>
+      </div>
+      <div class="pocket-list" id="pocketList"></div>
+    </div>
 
-      <svg class="scene scene-books" viewBox="0 0 200 200">
-        <g class="books">
-          <rect class="book" data-year="1" x="52" y="160" width="96" height="15" rx="3"/>
-          <rect class="book" data-year="3" x="58" y="142" width="84" height="15" rx="3"/>
-          <rect class="book" data-year="6" x="54" y="124" width="92" height="15" rx="3"/>
-          <rect class="book" data-year="10" x="60" y="106" width="80" height="15" rx="3"/>
-          <rect class="book" data-year="15" x="56" y="88" width="88" height="15" rx="3"/>
-          <rect class="book" data-year="22" x="62" y="70" width="76" height="15" rx="3"/>
-        </g>
-      </svg>
+    <div class="stage" aria-hidden="true" id="farStage">
+      <canvas id="curveCanvas" aria-label="三十年三线对照"></canvas>
     </div>
 
     <div class="readout">
-      <div class="readout-label" id="readoutLabel">三十年后</div>
+      <div class="readout-label" id="readoutLabel">现在</div>
       <div class="readout-value"><span id="valueNum">0</span><span class="readout-unit" id="valueUnit">元</span></div>
       <div class="readout-ghost" id="ghostLine"></div>
     </div>
@@ -186,18 +215,15 @@
     <p class="narration" id="narration">把时间拖过去，看看它会变成什么。</p>
 
     <div class="timeline">
-      <input id="timeSlider" type="range" min="0" max="30" step="0.1" value="0" aria-label="拖动时间">
+      <input id="timeSlider" type="range" min="0" max="84" step="1" value="0" aria-label="拖动时间">
       <div class="timeline-scale" aria-hidden="true">
-        <span>现在</span><span>10 年</span><span>20 年</span><span>30 年</span>
+        <span>现在</span><span id="tlMid">3 年半</span><span id="tlEnd">7 年</span>
       </div>
       <button class="btn btn-ghost btn-play" id="playBtn">▶ 让它自己走</button>
+      <button class="btn btn-ghost btn-roll" id="rollBtn" hidden>🎲 重掷意外</button>
     </div>
 
     <div class="controls" id="controls">
-      <div class="seg" id="modeSeg" role="group" aria-label="计算方式">
-        <button class="seg-item is-on" data-mode="daily">每天都算</button>
-        <button class="seg-item" data-mode="single">只算这一杯</button>
-      </div>
       <div class="seg" id="rateSeg" role="group" aria-label="年化收益率">
         <button class="seg-item" data-rate="0.03">3%</button>
         <button class="seg-item" data-rate="0.05">5%</button>
@@ -213,33 +239,63 @@
     <button class="btn" data-go="reveal">继续</button>
   </section>
 
-  <!-- 第五幕 · 反转 -->
+  <!-- 第六幕 · 反转 -->
   <section class="screen" data-screen="reveal">
     <p class="kicker">第四幕 · 你以为结束了</p>
-    <h2 class="step-title">刚才这三分钟，<br>你做了一次选择。</h2>
-    <p class="step-sub">而你真实的人生里，还有大约 <b>21,900</b> 次。</p>
+    <h2 class="step-title">刚才这几分钟，<br>你做了两次选择。</h2>
+    <p class="step-sub">而你真实的人生里，还有大约 <b>10,950</b> 天。</p>
 
     <div class="stars-wrap">
-      <canvas id="stars" aria-label="两万个点代表两万种可能的人生"></canvas>
-      <span class="stars-cap" aria-hidden="true">20,000 种可能</span>
+      <canvas id="stars" aria-label="上万天代表上万次选择"></canvas>
+      <span class="stars-cap" aria-hidden="true">10,950 天</span>
     </div>
 
-    <p class="reveal-line delay-1">下面每一颗点，是一种可能的人生。</p>
+    <p class="reveal-line delay-1">每一个点，是你有一天没注意到的选择。</p>
     <p class="reveal-line delay-2">亮起来的那一条，是你刚刚选的。</p>
     <p class="reveal-line delay-3 strong">它不特别。它只是你选的。</p>
 
-    <button class="btn" data-go="report">看看我的这一种</button>
+    <button class="btn" data-go="ending">看看这三个人</button>
   </section>
 
-  <!-- 第六幕 · 报告 -->
-  <section class="screen" data-screen="report">
-    <p class="kicker">第五幕 · 你的这一种人生</p>
-    <div class="report-wrap">
-      <img id="reportImg" alt="你的人生报告卡" width="720" height="1080">
+  <!-- 第七幕 · 结局（三线对照） -->
+  <section class="screen" data-screen="ending">
+    <p class="kicker">结局 · 这三个人</p>
+    <h2 class="step-title">同一笔钱，三十年，<br>三条路。</h2>
+
+    <div class="three-lines">
+      <div class="line-card line-actual">
+        <span class="line-tag">实际走的</span>
+        <b class="line-value" id="lineActual">—</b>
+        <small class="line-note" id="lineActualNote"></small>
+      </div>
+      <div class="line-card line-ideal">
+        <span class="line-tag">理想坚持的</span>
+        <b class="line-value" id="lineIdeal">—</b>
+        <small class="line-note" id="lineIdealNote"></small>
+      </div>
+      <div class="line-card line-zero">
+        <span class="line-tag">从未省过的</span>
+        <b class="line-value" id="lineZero">—</b>
+        <small class="line-note" id="lineZeroNote"></small>
+      </div>
     </div>
-    <p class="step-sub center" id="reportLine">这一张卡，是你刚才那三分钟留下的东西。</p>
+
+    <p class="reveal-line strong">这三个人，都是你。</p>
+    <p class="fineprint" id="taxLine"></p>
+
+    <button class="btn" data-go="report">生成我的纪念海报</button>
+  </section>
+
+  <!-- 第八幕 · 海报 + 回顾 -->
+  <section class="screen" data-screen="report">
+    <p class="kicker">你的这一种人生</p>
+    <div class="report-wrap">
+      <img id="reportImg" alt="你的人生纪念海报" width="720" height="1080">
+    </div>
+    <p class="step-sub center" id="reportLine">这一张海报，是你刚才那几分钟留下的东西。</p>
     <div class="actions">
-      <button class="btn" id="downloadBtn">保存这张卡</button>
+      <button class="btn" id="downloadBtn">保存海报（PNG）</button>
+      <button class="btn btn-ghost" id="videoBtn">🎬 生成 AI 回顾视频</button>
       <button class="btn btn-ghost" id="restartBtn">换一条路，再走一次</button>
     </div>
     <p class="fineprint" id="credits">AI 创客大赛 · 数字内容与创意表达类 · 互动叙事 demo</p>
