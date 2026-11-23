@@ -48,10 +48,21 @@ for (const match of html.matchAll(/data-go="([^"]+)"/g)) {
   check(`data-go ${match[1]} 有目标屏`, screens.includes(match[1]))
 }
 
-// 每个 data-choice 都出现在 JS 的判断里
-for (const choice of ['spend', 'invest', 'learn']) {
-  check(`choice ${choice} 在 JS 中处理`, js.includes(`'${choice}'`))
+// v3：每个月都有决策；特殊日子都有插画；四季背景齐全
+check('月度决策：五类去向齐全', ['money', 'skill', 'memory', 'relation', 'freedom'].every((k) => js.includes(`key: '${k}'`)))
+const specialKeys = [...js.matchAll(/key: '([a-z0-9-]+)', kind:/g)].map((m) => m[1])
+check('特殊日子数量 ≥ 12', specialKeys.length >= 12, `实际 ${specialKeys.length}`)
+const sceneBlock = (js.match(/var SCENES = \{([\s\S]*?)\n  \};/) || [])[1] || ''
+const sceneKeys = [...sceneBlock.matchAll(/'([a-z0-9-]+)':\s*'<svg/g)].map((m) => m[1])
+const missingScenes = specialKeys.filter((k) => !sceneKeys.includes(k) && k !== 'birthday')
+check('每个特殊日子都有插画', missingScenes.length === 0, missingScenes.join(', '))
+check('生日也有插画', sceneKeys.includes('birthday'))
+for (const s of ['spring', 'summer', 'autumn', 'winter']) {
+  check(`季节背景 ${s}`, css.includes(`data-season="${s}"`))
 }
+check('真实价格：高铁 679', js.includes('679'))
+check('真实价格：四六级 30 元', js.includes('笔试 30 元'))
+check('真实价格：熊猫基地 27', js.includes('27'))
 
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r

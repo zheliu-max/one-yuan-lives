@@ -8,7 +8,7 @@
 <title>一块钱的两万种人生</title>
 <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-season="autumn">
 <noscript>
   <div class="noscript">这部作品需要 JavaScript 才能播放。请在浏览器设置里允许它。</div>
 </noscript>
@@ -153,56 +153,12 @@
       </div>
     </div>
 
-    <button class="btn" data-go="fork">看看这笔钱的三条路</button>
+    <button class="btn" data-go="machine">开始这七年</button>
   </section>
 
-  <!-- 第四幕 · 岔路 -->
-  <section class="screen" data-screen="fork">
-    <p class="kicker">第二幕 · 三种人生</p>
-    <h2 class="step-title">钱只有一笔，<br>路有三条。</h2>
-    <p class="step-sub">选一条。没有正确答案，只有不同的三十年。</p>
-
-    <div class="cards">
-      <button class="card" data-choice="spend">
-        <span class="card-icon" aria-hidden="true">
-          <svg viewBox="0 0 40 40"><path d="M9 12h22l-2.5 20a3 3 0 0 1-3 2.6h-11a3 3 0 0 1-3-2.6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 8c0-2 2-3 2-5M20 8c0-2 2-3 2-5M26 8c0-2 2-3 2-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".6"/></svg>
-        </span>
-        <span class="card-body">
-          <b>喝掉这杯奶茶</b>
-          <small>换成一段记忆。</small>
-        </span>
-        <span class="card-go" aria-hidden="true">→</span>
-      </button>
-
-      <button class="card" data-choice="invest">
-        <span class="card-icon" aria-hidden="true">
-          <svg viewBox="0 0 40 40"><path d="M7 31h26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 27l6-8 5 4 7-12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="29" cy="11" r="2.4" fill="currentColor"/></svg>
-        </span>
-        <span class="card-body">
-          <b>存起来，定投</b>
-          <small>换成更多的钱。</small>
-        </span>
-        <span class="card-go" aria-hidden="true">→</span>
-      </button>
-
-      <button class="card" data-choice="learn">
-        <span class="card-icon" aria-hidden="true">
-          <svg viewBox="0 0 40 40"><path d="M20 12c-4-3-9-3-12-2v18c3-1 8-1 12 2 4-3 9-3 12-2V10c-3-1-8-1-12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M20 12v18" stroke="currentColor" stroke-width="2" opacity=".5"/></svg>
-        </span>
-        <span class="card-body">
-          <b>买一本二手书</b>
-          <small>换成更强的自己。</small>
-        </span>
-        <span class="card-go" aria-hidden="true">→</span>
-      </button>
-    </div>
-
-    <p class="fineprint">这三条路，只是五类去向的三种原型。<br>真实人生里，钱会在它们之间来回倒。</p>
-  </section>
-
-  <!-- 第五幕 · 时间机器（双模式） -->
+  <!-- 第四幕 · 时间机器（双模式） -->
   <section class="screen" data-screen="machine">
-    <p class="kicker" id="machineKicker">第三幕 · 时间机器</p>
+    <p class="kicker" id="machineKicker">第四幕 · 时间机器</p>
 
     <div class="mode-seg" role="group" aria-label="时间模式">
       <button class="mode-item is-on" data-mode="near">近期 · 七年账本</button>
@@ -231,6 +187,7 @@
       </div>
 
       <div class="special" id="specialCard" hidden>
+        <div class="special-scene" id="specialScene" aria-hidden="true"></div>
         <span class="special-tag" id="specialTag">特殊日子</span>
         <p class="special-text" id="specialText"></p>
         <div class="special-body" id="specialBody"></div>
@@ -294,9 +251,9 @@
     <button class="btn" id="nextMonthBtn">下一个月 →</button>
   </section>
 
-  <!-- 第六幕 · 反转 -->
+  <!-- 第五幕 · 反转 -->
   <section class="screen" data-screen="reveal">
-    <p class="kicker">第四幕 · 你以为结束了</p>
+    <p class="kicker">第五幕 · 你以为结束了</p>
     <h2 class="step-title">刚才这几分钟，<br>你做了两次选择。</h2>
     <p class="step-sub">而你真实的人生里，还有大约 <b>10,950</b> 天。</p>
 
@@ -312,7 +269,7 @@
     <button class="btn" data-go="ending">看看这三个人</button>
   </section>
 
-  <!-- 第七幕 · 结局（三线对照） -->
+  <!-- 第六幕 · 结局（三线对照） -->
   <section class="screen" data-screen="ending">
     <p class="kicker">结局 · 这三个人</p>
     <h2 class="step-title">同一笔钱，三十年，<br>三条路。</h2>
@@ -341,7 +298,7 @@
     <button class="btn" data-go="report">生成我的纪念海报</button>
   </section>
 
-  <!-- 第八幕 · 海报 + 回顾 -->
+  <!-- 第七幕 · 海报 + 回顾 -->
   <section class="screen" data-screen="report">
     <p class="kicker">你的这一种人生</p>
     <div class="report-wrap">

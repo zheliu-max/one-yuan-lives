@@ -12,7 +12,7 @@
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
 
-  var SCREENS = ['cover', 'identity', 'setup', 'fork', 'machine', 'reveal', 'ending', 'report'];
+  var SCREENS = ['cover', 'identity', 'setup', 'machine', 'reveal', 'ending', 'report'];
   var INFLATION = 0.03;
   var NEAR_YEARS = 7;        // 近期：七年
   var NEAR_MONTHS = 84;      // 七年 × 12
@@ -27,7 +27,6 @@
     budget: 1800,
     amount: 15,
     habit: 5,
-    choice: null,
     birthday: null,           // 生日月份 1-12
     timelineMode: 'near',     // 'near' | 'far'
     slider: 0,                // 近期按月(0-84)，长期按年(0-30)
@@ -132,35 +131,84 @@
     { key: 'freedom', label: '留作应急', icon: '🛟', note: '应付突然的一天', pocket: 'freedom' }
   ];
 
-  // 特殊日子：按月份触发的真实情境（大学生活）
-  // kind: 'ask'   = 需要玩家额外决定（花 / 不花）
-  //       'gain'  = 一笔额外收入，自动进账
-  //       'info'  = 只是提示，不改变钱
+  // 特殊日子：真实校历 + 真实价格（2026-11 校准）
+  // kind: 'ask' = 花/不花；'gain' = 自动进账；'info' = 只提示；'ask-travel' = 选目的地
   var SPECIAL_DAYS = [
-    { month: 1, key: 'winter-home', kind: 'ask', tag: '寒假', title: '回家过年', text: '回家的车票 400 元。你还会被亲戚问“以后想做什么”。', cost: 400, pocket: 'relation' },
-    { month: 2, key: 'lucky-money', kind: 'gain', tag: '春节', title: '压岁钱', text: '长辈给的压岁钱，一笔突然到手的钱。', amount: 2000 },
-    { month: 3, key: 'cet', kind: 'ask', tag: '考试季', title: '四六级 / 计算机二级', text: '报名费 130 元。考不过，明年再来一次。', cost: 130, pocket: 'skill' },
-    { month: 4, key: 'concert', kind: 'ask', tag: '春天', title: '奥体有场演唱会', text: '票 680 元。你会记很久，也可能只是站了三小时。', cost: 680, pocket: 'memory' },
-    { month: 5, key: 'labour', kind: 'ask', tag: '五一', title: '五一假期', text: '室友都出门了。去一趟扬州，两天 500 元。', cost: 500, pocket: 'memory' },
-    { month: 6, key: 'final', kind: 'info', tag: '期末', title: '期末周', text: '打印店排队，通宵，外卖涨到 25 一顿。这个月存不下什么。' },
-    { month: 6, key: 'graduation', kind: 'ask', tag: '毕业季', title: '毕业旅行 / 送别饭', text: '大四的六月，很多人会花掉一大笔。1200 元。', cost: 1200, pocket: 'memory' },
-    { month: 7, key: 'summer', kind: 'ask-travel', tag: '暑假', title: '暑假到了', text: '你攒了一个学期的旅行基金，现在可以决定去哪。' },
-    { month: 8, key: 'intern', kind: 'gain', tag: '实习', title: '实习工资', text: '这个暑假你实习了，拿到一笔钱。', amount: 3000 },
-    { month: 9, key: 'newterm', kind: 'ask', tag: '开学', title: '开学采购', text: '教材、被套、新的耳机。600 元。', cost: 600, pocket: 'skill' },
-    { month: 10, key: 'autumn', kind: 'ask', tag: '秋天', title: '栖霞山 / 秋游', text: '南京的秋天只有几周。一趟 200 元。', cost: 200, pocket: 'memory' },
-    { month: 11, key: 'double11', kind: 'ask', tag: '双十一', title: '双十一', text: '购物车里躺了很久的东西，今晚打折。800 元。', cost: 800, pocket: 'relation' },
-    { month: 12, key: 'newyear', kind: 'ask', tag: '年末', title: '跨年 / 圣诞', text: '朋友约你跨年，人均 300 元。', cost: 300, pocket: 'memory' },
-    { month: 12, key: 'kaoyan', kind: 'ask', tag: '规划', title: '考研班 / 技能课', text: '要不要报？800 元，可能改变你之后几年的方向。', cost: 800, pocket: 'skill' }
+    { month: 1, key: 'winter-home', kind: 'ask', tag: '寒假', date: '1 月中下旬', title: '回家过年', text: '南京南到家里的高铁。学生票一年只有 4 次，且限家—校区间。', cost: 400, pocket: 'relation' },
+    { month: 2, key: 'lucky-money', kind: 'gain', tag: '春节', date: '2 月中旬', title: '压岁钱', text: '长辈给的压岁钱。这笔钱是你一年里最大的一笔“横财”。', amount: 2000 },
+    { month: 3, key: 'newterm', kind: 'ask', tag: '春季开学', date: '3 月初', title: '开学采购', text: '教材、打印、日用品。一学期 300 元起步。', cost: 300, pocket: 'skill' },
+    { month: 4, key: 'qingming', kind: 'ask', tag: '清明', date: '4 月 4–6 日', title: '踏青', text: '南京的春天只有几周。去一趟栖霞山或玄武湖，100 元。', cost: 100, pocket: 'memory' },
+    { month: 4, key: 'concert', kind: 'ask', tag: '演唱会', date: '4 月周末', title: '奥体有场演唱会', text: '看台票 680 元。你会记很久，也可能只是站了三小时。', cost: 680, pocket: 'memory' },
+    { month: 5, key: 'labour', kind: 'ask', tag: '五一', date: '5 月 1–5 日', title: '五一假期', text: '去扬州：高铁往返 140 + 青旅 60 + 瘦西湖学生票 50 + 吃 120 ≈ 370 元。', cost: 370, pocket: 'memory' },
+    { month: 6, key: 'final', kind: 'info', tag: '期末', date: '6 月下旬', title: '期末周', text: '打印店排队，通宵，外卖涨到 25 一顿。这个月存不下什么。' },
+    { month: 6, key: 'cet', kind: 'ask', tag: '四六级', date: '6 月中旬', title: '四六级报名', text: '江苏笔试 30 元/人。考不过，下次再来。', cost: 30, pocket: 'skill' },
+    { month: 6, key: 'graduation', kind: 'ask', tag: '毕业季', date: '6 月下旬', title: '毕业旅行 / 送别饭', text: '大四的六月，很多人会花掉一大笔。1,200 元。', cost: 1200, pocket: 'memory' },
+    { month: 7, key: 'summer', kind: 'ask-travel', tag: '暑假', date: '7 月', title: '暑假到了', text: '你攒了一个学期的旅行基金，现在可以决定去哪。' },
+    { month: 8, key: 'intern', kind: 'gain', tag: '实习', date: '8 月', title: '实习工资', text: '这个暑假你实习了，拿到一笔钱。', amount: 3000 },
+    { month: 9, key: 'newterm2', kind: 'ask', tag: '秋季开学', date: '9 月初', title: '开学采购', text: '教材、被套、新的耳机。300 元。', cost: 300, pocket: 'skill' },
+    { month: 10, key: 'autumn', kind: 'ask', tag: '国庆·秋游', date: '10 月 1–7 日', title: '栖霞山看红叶', text: '旺季门票 50 元，学生半价 25。南京的秋天只有几周。', cost: 25, pocket: 'memory' },
+    { month: 11, key: 'double11', kind: 'ask', tag: '双十一', date: '11 月 11 日', title: '双十一', text: '购物车里躺了很久的东西，今晚打折。500 元。', cost: 500, pocket: 'relation' },
+    { month: 12, key: 'kaoyan', kind: 'ask', tag: '考研', date: '12 月下旬', title: '考研报名 / 冲刺班', text: '江苏报名费 120 元。冲刺班另算，看你要不要赌这一把。', cost: 120, pocket: 'skill' },
+    { month: 12, key: 'newyear', kind: 'ask', tag: '跨年', date: '12 月 31 日', title: '跨年', text: '朋友约你跨年，人均 300 元。', cost: 300, pocket: 'memory' }
   ];
 
-  // 暑假旅行目的地（南京出发，真实价格）
+  // 暑假旅行目的地（南京出发，真实价格，2026-11 校准）
   var TRAVELS = [
-    { key: 'yangzhou', name: '扬州', days: 2, cost: 500, desc: '高铁 1 小时，瘦西湖 + 早茶' },
-    { key: 'chengdu', name: '成都', days: 4, cost: 1800, desc: '高铁往返 1080 + 青旅 3 晚 420 + 熊猫基地 27 + 火锅 300' },
-    { key: 'xian', name: '西安', days: 4, cost: 1500, desc: '高铁往返 900 + 青旅 3 晚 300 + 兵马俑 + 吃' },
-    { key: 'sanya', name: '三亚', days: 5, cost: 3200, desc: '机票往返 1600 + 青旅 4 晚 600 + 玩海 + 吃' },
+    {
+      key: 'yangzhou', name: '扬州', days: 2, cost: 400,
+      desc: '高铁 70×2 + 青旅 60 + 瘦西湖学生票 50 + 吃 120 + 市内 30'
+    },
+    {
+      key: 'chengdu', name: '成都', days: 4, cost: 1900,
+      desc: '高铁 679×2 + 青旅 3 晚 180 + 熊猫基地学生票 27 + 吃 280 + 市内 55'
+    },
+    {
+      key: 'xian', name: '西安', days: 4, cost: 1600,
+      desc: '高铁 550×2 + 青旅 3 晚 180 + 兵马俑学生票 60 + 吃 240 + 市内 40'
+    },
+    {
+      key: 'sanya', name: '三亚', days: 5, cost: 2400,
+      desc: '机票往返 1,500 + 青旅 4 晚 280 + 玩海 150 + 吃 400 + 市内 80'
+    },
     { key: 'home', name: '哪也不去', days: 0, cost: 0, desc: '钱留着，暑假在家' }
   ];
+
+  /* ---------- 每个日子的插画（内联 SVG，离线可用） ---------- */
+  var SCENES = {
+    'winter-home': '<svg viewBox="0 0 200 120"><rect x="0" y="84" width="200" height="36" fill="#eef2f4"/><path d="M0 88c30-8 62 5 92-1s60-8 108 3v30H0z" fill="#f7fafb"/><rect x="120" y="58" width="46" height="28" fill="#cfd8dd"/><path d="M114 58l29-18 29 18z" fill="#a9b8c0"/><rect x="137" y="68" width="12" height="18" fill="#f2c96b"/><rect x="22" y="52" width="72" height="18" rx="4" fill="#8fa6b3"/><rect x="28" y="56" width="10" height="10" fill="#fdf6ea"/><rect x="44" y="56" width="10" height="10" fill="#fdf6ea"/><rect x="60" y="56" width="10" height="10" fill="#fdf6ea"/><circle cx="20" cy="22" r="2" fill="#dbe6ea"/><circle cx="54" cy="14" r="1.6" fill="#dbe6ea"/><circle cx="90" cy="30" r="1.8" fill="#dbe6ea"/><circle cx="152" cy="18" r="2" fill="#dbe6ea"/></svg>',
+
+    'lucky-money': '<svg viewBox="0 0 200 120"><rect x="62" y="26" width="76" height="74" rx="6" fill="#c0452f"/><rect x="62" y="54" width="76" height="14" fill="#e8b24a"/><circle cx="100" cy="61" r="9" fill="#f2d08a"/><path d="M96 61h8M100 57v8" stroke="#b8862b" stroke-width="2" stroke-linecap="round"/><path d="M22 18v26M22 26h10l-10 12h10" stroke="#e8b24a" stroke-width="2.5" fill="none" stroke-linecap="round"/><ellipse cx="27" cy="52" rx="7" ry="9" fill="#c0452f" opacity=".85"/><rect x="176" y="20" width="12" height="30" rx="3" fill="#e8b24a" opacity=".8"/></svg>',
+
+    'birthday': '<svg viewBox="0 0 200 120"><rect x="58" y="76" width="84" height="26" rx="4" fill="#e9c9a3"/><rect x="56" y="56" width="88" height="22" rx="4" fill="#d9a06a"/><path d="M64 78c0-8 6-14 12-14s12 6 12 14M100 78c0-8 6-14 12-14s12 6 12 14" fill="none" stroke="#b07a3f" stroke-width="2"/><rect x="80" y="38" width="4" height="18" fill="#c0452f"/><rect x="98" y="34" width="4" height="22" fill="#3f6f66"/><rect x="116" y="38" width="4" height="18" fill="#d79a3f"/><ellipse cx="82" cy="34" rx="3.5" ry="6" fill="#f2b04a"/><ellipse cx="100" cy="30" rx="3.5" ry="6" fill="#f2b04a"/><ellipse cx="118" cy="34" rx="3.5" ry="6" fill="#f2b04a"/><circle cx="40" cy="26" r="2" fill="#d98a6a"/><circle cx="162" cy="34" r="2.4" fill="#7fa8a0"/><circle cx="150" cy="18" r="1.6" fill="#d79a3f"/></svg>',
+
+    'cet': '<svg viewBox="0 0 200 120"><rect x="44" y="20" width="86" height="76" rx="4" fill="#fdfaf3" stroke="#cbb497" stroke-width="2"/><path d="M56 34h62M56 44h62M56 54h48M56 64h56" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/><circle cx="150" cy="72" r="18" fill="#fdf6ea" stroke="#8aa39c" stroke-width="2.5"/><path d="M150 62v10l7 5" stroke="#3f6f66" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M132 30l12-8" stroke="#d79a3f" stroke-width="4" stroke-linecap="round"/></svg>',
+
+    'concert': '<svg viewBox="0 0 200 120"><rect x="0" y="86" width="200" height="34" fill="#2b2320"/><path d="M100 12l-26 74h52z" fill="#d79a3f" opacity=".28"/><path d="M56 16l14 70h-28z" fill="#7fa8a0" opacity=".25"/><path d="M144 16l-14 70h28z" fill="#d98a6a" opacity=".25"/><rect x="72" y="30" width="56" height="40" rx="3" fill="#201a17"/><circle cx="100" cy="50" r="7" fill="#f2c96b"/><circle cx="34" cy="96" r="7" fill="#1a1412"/><circle cx="58" cy="100" r="8" fill="#1a1412"/><circle cx="88" cy="98" r="7" fill="#1a1412"/><circle cx="118" cy="101" r="8" fill="#1a1412"/><circle cx="150" cy="97" r="7" fill="#1a1412"/><circle cx="174" cy="102" r="7" fill="#1a1412"/></svg>',
+
+    'qingming': '<svg viewBox="0 0 200 120"><circle cx="156" cy="28" r="16" fill="#f2c96b" opacity=".9"/><path d="M0 92l40-38 30 22 26-28 34 30 30-18v40z" fill="#9fb8a4"/><path d="M0 100c40-10 80 6 120-2s60-6 80 4v18H0z" fill="#7fa890"/><path d="M96 120c-4-14 6-22 12-30" stroke="#fdf6ea" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+
+    'labour': '<svg viewBox="0 0 200 120"><circle cx="46" cy="30" r="14" fill="#f2c96b"/><path d="M0 90l46-34 32 24 30-30 44 34 48-20v36H0z" fill="#a8bfae"/><path d="M0 100c44-8 82 8 124 0s52-4 76 6v14H0z" fill="#89ab95"/><rect x="120" y="94" width="34" height="18" rx="2" fill="#e8d5b8"/><path d="M120 94l17-12 17 12z" fill="#d79a3f"/></svg>',
+
+    'final': '<svg viewBox="0 0 200 120"><rect x="20" y="14" width="60" height="44" rx="3" fill="#2b3440"/><circle cx="72" cy="26" r="0" fill="#f2c96b"/><path d="M34 34c4-4 8 4 12 0s8 4 12 0" stroke="#5b6b7a" stroke-width="1.5" fill="none"/><rect x="26" y="66" width="104" height="10" rx="2" fill="#d9c9b3"/><rect x="34" y="44" width="60" height="22" rx="2" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M44 52h40M44 58h28" stroke="#cbb497" stroke-width="1.6" stroke-linecap="round"/><path d="M150 30v46" stroke="#4a4038" stroke-width="3" stroke-linecap="round"/><path d="M150 30l22-8v18l-22 8z" fill="#d79a3f"/><ellipse cx="150" cy="84" rx="16" ry="5" fill="#f2c96b" opacity=".55"/><rect x="138" y="84" width="24" height="6" rx="2" fill="#8a6a4a"/></svg>',
+
+    'graduation': '<svg viewBox="0 0 200 120"><path d="M56 44l44-18 44 18-44 18z" fill="#2f3a46"/><path d="M74 52v20c0 6 12 10 26 10s26-4 26-10V52" fill="none" stroke="#2f3a46" stroke-width="5"/><path d="M144 44v22" stroke="#d79a3f" stroke-width="2.5" stroke-linecap="round"/><circle cx="144" cy="70" r="4" fill="#d79a3f"/><rect x="58" y="92" width="84" height="10" rx="2" fill="#e8d5b8"/><path d="M58 92h84" stroke="#cbb497" stroke-width="2"/></svg>',
+
+    'summer': '<svg viewBox="0 0 200 120"><circle cx="160" cy="26" r="16" fill="#f2c96b"/><rect x="52" y="40" width="62" height="58" rx="6" fill="#d9a06a"/><rect x="52" y="58" width="62" height="8" fill="#b07a3f"/><path d="M76 40V22h14v18" fill="none" stroke="#b07a3f" stroke-width="4"/><rect x="132" y="52" width="44" height="30" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M140 62h28M140 70h20" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/><path d="M24 96c18-8 36 4 54-2" stroke="#7fa8a0" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+
+    'intern': '<svg viewBox="0 0 200 120"><rect x="46" y="44" width="86" height="52" rx="4" fill="#3b4754"/><rect x="54" y="52" width="70" height="36" rx="2" fill="#8fb3c9"/><rect x="36" y="96" width="106" height="8" rx="3" fill="#2b3440"/><rect x="146" y="36" width="30" height="42" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><rect x="152" y="44" width="18" height="14" rx="1" fill="#d98a6a"/><path d="M152 66h18M152 72h10" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/></svg>',
+
+    'newterm': '<svg viewBox="0 0 200 120"><rect x="56" y="20" width="88" height="66" rx="3" fill="#e8d5b8"/><path d="M56 20l44-10 44 10" fill="none" stroke="#b07a3f" stroke-width="3"/><rect x="72" y="34" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="96" y="34" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="120" y="34" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="72" y="58" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="96" y="58" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="120" y="58" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="30" y="70" width="30" height="30" rx="6" fill="#3f6f66"/><path d="M38 70v-8a7 7 0 0 1 14 0v8" fill="none" stroke="#3f6f66" stroke-width="3"/></svg>',
+
+    'newterm2': '<svg viewBox="0 0 200 120"><rect x="56" y="20" width="88" height="66" rx="3" fill="#e8d5b8"/><path d="M56 20l44-10 44 10" fill="none" stroke="#b07a3f" stroke-width="3"/><rect x="72" y="34" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="96" y="34" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="120" y="34" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="72" y="58" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="96" y="58" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="120" y="58" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="30" y="70" width="30" height="30" rx="6" fill="#d98a6a"/><path d="M38 70v-8a7 7 0 0 1 14 0v8" fill="none" stroke="#d98a6a" stroke-width="3"/></svg>',
+
+    'autumn': '<svg viewBox="0 0 200 120"><circle cx="152" cy="26" r="14" fill="#f2c96b" opacity=".85"/><path d="M0 92l38-32 30 20 26-26 32 28 28-16 46 26v28H0z" fill="#c98a5a"/><path d="M0 102c40-8 78 6 118-2s56-4 82 6v14H0z" fill="#b06a3c"/><path d="M96 62c-10-6-20-2-24 6 8 6 18 4 24-6z" fill="#bf5a2c"/><path d="M96 62c8-8 18-8 24-2-4 10-14 12-24 2z" fill="#d79a3f"/><path d="M96 62v18" stroke="#8a4a1c" stroke-width="2" stroke-linecap="round"/></svg>',
+
+    'double11': '<svg viewBox="0 0 200 120"><path d="M40 34h14l10 48h66l12-36H60" fill="none" stroke="#4a4038" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="76" cy="94" r="6" fill="#4a4038"/><circle cx="118" cy="94" r="6" fill="#4a4038"/><rect x="112" y="10" width="34" height="54" rx="4" fill="#2f3a46"/><rect x="117" y="16" width="24" height="42" rx="2" fill="#c9dbe6"/><path d="M126 24h6v8h-6z" fill="#d98a6a"/><path d="M120 40h18M120 46h12" stroke="#8fa6b3" stroke-width="1.6" stroke-linecap="round"/><path d="M154 26l10-6M154 34h12M154 42l10 6" stroke="#d79a3f" stroke-width="2.5" stroke-linecap="round"/></svg>',
+
+    'newyear': '<svg viewBox="0 0 200 120"><rect x="0" y="96" width="200" height="24" fill="#2b2320"/><rect x="16" y="70" width="16" height="26" fill="#3b3330"/><rect x="38" y="58" width="20" height="38" fill="#3b3330"/><rect x="64" y="74" width="14" height="22" fill="#3b3330"/><rect x="84" y="50" width="22" height="46" fill="#3b3330"/><rect x="112" y="66" width="18" height="30" fill="#3b3330"/><rect x="136" y="56" width="16" height="40" fill="#3b3330"/><rect x="158" y="72" width="18" height="24" fill="#3b3330"/><g stroke-linecap="round"><path d="M60 18v-8M60 26v8M48 22h-8M72 22h8M52 14l-5-5M68 14l5-5" stroke="#f2c96b" stroke-width="2"/><path d="M136 30v-7M136 38v7M126 34h-7M146 34h7" stroke="#d98a6a" stroke-width="2"/></g><circle cx="60" cy="22" r="3" fill="#fdf6ea"/><circle cx="136" cy="34" r="2.5" fill="#fdf6ea"/></svg>',
+
+    'kaoyan': '<svg viewBox="0 0 200 120"><rect x="46" y="76" width="76" height="14" rx="2" fill="#8a6a4a"/><rect x="52" y="62" width="64" height="14" rx="2" fill="#3f6f66"/><rect x="48" y="48" width="72" height="14" rx="2" fill="#d98a6a"/><path d="M150 24v52" stroke="#4a4038" stroke-width="3" stroke-linecap="round"/><path d="M150 24l18-6v14l-18 6z" fill="#d79a3f"/><ellipse cx="150" cy="82" rx="15" ry="5" fill="#f2c96b" opacity=".5"/><rect x="28" y="30" width="34" height="34" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M34 40h22M34 48h22M34 56h14" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/></svg>'
+  };
 
   // 意外事件（真实概率）—— 每年一次机会
   var ACCIDENTS = [
@@ -512,15 +560,6 @@
     });
   }
 
-  /* 岔路 */
-  function pickChoice(choice) {
-    state.choice = choice;
-    $$('.card').forEach(function (card) {
-      card.classList.toggle('is-picked', card.getAttribute('data-choice') === choice);
-    });
-    setTimeout(function () { go('machine'); }, 220);
-  }
-
   /* ---------- 时间机器（双模式） ---------- */
 
   var pendingSlider = null;
@@ -560,7 +599,7 @@
     slider.value = state.slider;
 
     $('#rateSeg').hidden = false;
-    $('#inflationRow').hidden = state.choice === 'learn' && state.timelineMode === 'near';
+    $('#inflationRow').hidden = false;
     sync();
   }
 
@@ -625,6 +664,7 @@
     state.slider = month;
     runNearTo(month);
     syncHeader(month);
+    applySeason(month);
 
     var parts = monthParts(month);
     var label = '第 ' + parts.year + ' 年 · ' + parts.month + ' 月';
@@ -652,8 +692,11 @@
     var spBody = $('#specialBody');
     if (sp) {
       $('#specialCard').hidden = false;
-      $('#specialTag').textContent = sp.tag;
+      $('#specialTag').textContent = sp.tag + (sp.date ? ' · ' + sp.date : '');
       $('#specialText').textContent = sp.title + '：' + sp.text;
+      // 每个日子配一张内联 SVG 插画（离线可用）
+      var sceneEl = $('#specialScene');
+      sceneEl.innerHTML = SCENES[sp.key] || '';
       spBody.innerHTML = '';
 
       if (decided && decided.specialChoice) {
@@ -717,16 +760,10 @@
     // 身上现金与五口袋
     var total = nearPocketTotal();
     var readout = $('.readout-value');
-    if (state.choice === 'learn') {
-      readout.classList.add('is-text');
-      $('#valueNum').textContent = '能力';
-      $('#valueUnit').textContent = '不可测算';
-    } else {
-      readout.classList.remove('is-text');
-      var parts = readoutParts(total);
-      $('#valueNum').textContent = parts.num;
-      $('#valueUnit').textContent = parts.unit;
-    }
+    readout.classList.remove('is-text');
+    var parts = readoutParts(total);
+    $('#valueNum').textContent = parts.num;
+    $('#valueUnit').textContent = parts.unit;
     $('#ghostLine').textContent = '五口袋 ' + fmtMoney(total) + ' · 手上现金 ' + fmtMoney(state.near.cash);
 
     renderPockets();
@@ -743,6 +780,17 @@
   /** 顶部三行摘要（身份 / 学校 / 生日）。 */
   function syncHeader() {
     // 目前不需要额外元素，保留钩子便于后续加抬头信息
+  }
+
+  /** 按真实月份切换背景季节：春 3–5、夏 6–8、秋 9–11、冬 12–2。 */
+  function applySeason(monthIndex) {
+    var m = monthParts(monthIndex).month;
+    var season = (m >= 3 && m <= 5) ? 'spring'
+      : (m >= 6 && m <= 8) ? 'summer'
+        : (m >= 9 && m <= 11) ? 'autumn' : 'winter';
+    if (document.body.getAttribute('data-season') !== season) {
+      document.body.setAttribute('data-season', season);
+    }
   }
 
   function renderPockets() {
@@ -888,11 +936,8 @@
   }
 
   function disclaimerText() {
-    if (state.choice === 'learn') {
-      return '能力袋不产生复利，它只改变你以后赚钱的斜率。';
-    }
     if (state.timelineMode === 'near') {
-      return '近期账本按你选的「每月生活费」估算。意外按真实概率掷骰：丢手机约 6%/年、住院约 4%/年、诈骗约 5%/年、重修约 4%/年。';
+      return '价格均为真实口径：高铁二等座按 12306（南京南→成都东 679 元、→西安 550 元、→扬州 70 元），景区学生票按官方（熊猫基地 27、兵马俑 60、瘦西湖 50），四六级 30 元、考研报名 120 元（江苏）。意外按真实概率掷骰。';
     }
     return '长期按年化 ' + rateLabel() + ' 计算；「理想」假设你一直坚持，「实际」假设你中途松手（人性税）。8% 是长期股票指数的历史假设，不是承诺。';
   }
@@ -1252,16 +1297,12 @@
     img.src = canvas.toDataURL('image/png');
     img.dataset.ready = '1';
 
-    $('#reportLine').textContent = state.choice === 'learn'
-      ? '这一张海报上没有数字。有些东西本来就不该被打分。'
-      : '这一张海报，是你刚才那几分钟留下的东西。';
+    $('#reportLine').textContent = '这一张海报，是你刚才那几分钟留下的东西。';
 
     reportCanvas = canvas;
   }
 
   function cardQuote() {
-    if (state.choice === 'spend') return '你不是输给了复利。\n你只是买了三十秒的凉。';
-    if (state.choice === 'learn') return '有些选择不产生利息，\n它只产生你自己。';
     return '你当年只是把 15 块换了个地方放。\n剩下的，时间替你做了。';
   }
 
@@ -1313,7 +1354,7 @@
   function restart() {
     state.grade = null; state.school = null; state.major = null; state.birthday = null;
     state.budget = 1800; state.amount = 15; state.habit = 5;
-    state.choice = null; state.timelineMode = 'near'; state.slider = 0;
+    state.timelineMode = 'near'; state.slider = 0;
     state.rate = 0.08; state.inflation = false;
     state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], decisions: {}, monthLog: [], done84: false };
     state.far = { actual: 0, ideal: 0, zero: 0, years: 0, series: { actual: [], ideal: [], zero: [] } };
@@ -1359,8 +1400,6 @@
         go(nav.getAttribute('data-go'));
         return;
       }
-      var card = node.closest('.card');
-      if (card) pickChoice(card.getAttribute('data-choice'));
     });
 
     $('#amount').addEventListener('input', function () { readInputs(false); });
@@ -1434,8 +1473,6 @@
     var hash = location.hash.replace(/^#/, '');
     if (SCREENS.indexOf(hash) <= 0) return false;
     var params = new URLSearchParams(location.search);
-    var choice = params.get('choice');
-    if (choice === 'spend' || choice === 'invest' || choice === 'learn') state.choice = choice;
     var mode = params.get('mode');
     if (mode === 'near' || mode === 'far') state.timelineMode = mode;
     if (hash === 'setup') { go(hash); return true; }

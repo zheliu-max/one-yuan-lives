@@ -438,6 +438,37 @@ input:focus-visible {
 
 .timeline-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 
+/* 四季背景：随账本月份自动切换 */
+body {
+  transition: background .8s ease;
+}
+body[data-season="spring"] {
+  background: radial-gradient(120% 78% at 50% -10%, #fdfbf2 0%, #f2ecdd 45%, #e4e8d4 100%);
+}
+body[data-season="summer"] {
+  background: radial-gradient(120% 78% at 50% -10%, #fffdf0 0%, #f7efd4 45%, #e8e2bd 100%);
+}
+body[data-season="autumn"] {
+  background: radial-gradient(120% 78% at 50% -10%, #fdf6ea 0%, #f3e6d2 45%, #e9d5bb 100%);
+}
+body[data-season="winter"] {
+  background: radial-gradient(120% 78% at 50% -10%, #fbfcfd 0%, #f0f2f4 45%, #e2e8ec 100%);
+}
+
+/* 每个日子的插画 */
+.special-scene {
+  margin: -13px -15px 10px;
+  border-radius: 13px 13px 0 0;
+  overflow: hidden;
+  line-height: 0;
+  background: rgba(255, 250, 241, .5);
+}
+.special-scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* 五口袋 */
 .pocket-bar {
   display: flex;
