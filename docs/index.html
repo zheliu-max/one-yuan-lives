@@ -76,9 +76,27 @@
       <div class="field-group">
         <span class="field-label">你的学校</span>
         <div class="chips" id="schoolChips" role="radiogroup" aria-label="学校">
-          <button class="chip" data-school="nju">南京大学</button>
+          <button class="chip" data-school="seu">东南大学</button>
           <button class="chip" data-school="nj">南京其他高校</button>
           <button class="chip" data-school="other">其他城市</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">你的生日在几月</span>
+        <div class="chips chips-compact" id="birthdayChips" role="radiogroup" aria-label="生日月份">
+          <button class="chip" data-birthday="1">1月</button>
+          <button class="chip" data-birthday="2">2月</button>
+          <button class="chip" data-birthday="3">3月</button>
+          <button class="chip" data-birthday="4">4月</button>
+          <button class="chip" data-birthday="5">5月</button>
+          <button class="chip" data-birthday="6">6月</button>
+          <button class="chip" data-birthday="7">7月</button>
+          <button class="chip" data-birthday="8">8月</button>
+          <button class="chip" data-birthday="9">9月</button>
+          <button class="chip" data-birthday="10">10月</button>
+          <button class="chip" data-birthday="11">11月</button>
+          <button class="chip" data-birthday="12">12月</button>
         </div>
       </div>
 
@@ -191,7 +209,41 @@
       <button class="mode-item" data-mode="far">长期 · 三十年</button>
     </div>
 
-    <div class="stage" aria-hidden="true" id="nearStage">
+    <div id="nearStage">
+      <div class="month-head">
+        <span class="month-badge" id="monthBadge">第 1 年 · 9 月</span>
+        <span class="month-left" id="monthLeft">还剩 83 次决定</span>
+      </div>
+
+      <div class="income-card" id="incomeCard">
+        <div class="income-row">
+          <span>到账</span><b id="incAllow">—</b>
+        </div>
+        <div class="income-row" id="incExtraRow" hidden>
+          <span id="incExtraLabel">额外收入</span><b id="incExtra">—</b>
+        </div>
+        <div class="income-row muted">
+          <span>固定支出</span><b id="incBase">—</b>
+        </div>
+        <div class="income-row total">
+          <span>这个月能决定的闲钱</span><b id="incFree">—</b>
+        </div>
+      </div>
+
+      <div class="special" id="specialCard" hidden>
+        <span class="special-tag" id="specialTag">特殊日子</span>
+        <p class="special-text" id="specialText"></p>
+        <div class="special-body" id="specialBody"></div>
+      </div>
+
+      <p class="decide-title" id="decideTitle">这笔钱，你想怎么放？</p>
+      <div class="decide-grid" id="decideGrid"></div>
+
+      <div class="month-log" id="monthLogWrap" hidden>
+        <div class="month-log-title">本月账本</div>
+        <div class="month-log-body" id="monthLog"></div>
+      </div>
+
       <div class="pocket-bar" aria-hidden="true">
         <div class="pocket-seg" id="pocketMoney"></div>
         <div class="pocket-seg" id="pocketSkill"></div>
@@ -202,25 +254,28 @@
       <div class="pocket-list" id="pocketList"></div>
     </div>
 
-    <div class="stage" aria-hidden="true" id="farStage">
+    <div id="farStage" hidden>
       <canvas id="curveCanvas" aria-label="三十年三线对照"></canvas>
     </div>
 
-    <div class="readout">
+    <div class="readout" id="readoutBox">
       <div class="readout-label" id="readoutLabel">现在</div>
       <div class="readout-value"><span id="valueNum">0</span><span class="readout-unit" id="valueUnit">元</span></div>
       <div class="readout-ghost" id="ghostLine"></div>
     </div>
 
-    <p class="narration" id="narration">把时间拖过去，看看它会变成什么。</p>
+    <p class="narration" id="narration">来看看这一个月。</p>
 
-    <div class="timeline">
+    <div class="timeline" id="timelineWrap">
       <input id="timeSlider" type="range" min="0" max="84" step="1" value="0" aria-label="拖动时间">
       <div class="timeline-scale" aria-hidden="true">
         <span>现在</span><span id="tlMid">3 年半</span><span id="tlEnd">7 年</span>
       </div>
-      <button class="btn btn-ghost btn-play" id="playBtn">▶ 让它自己走</button>
-      <button class="btn btn-ghost btn-roll" id="rollBtn" hidden>🎲 重掷意外</button>
+      <div class="timeline-actions">
+        <button class="btn btn-ghost btn-play" id="playBtn">▶ 一路看完</button>
+        <button class="btn btn-ghost btn-roll" id="rollBtn" hidden>🎲 重掷意外</button>
+        <button class="btn btn-ghost" id="resetMonthBtn" hidden>↺ 重来这一个月</button>
+      </div>
     </div>
 
     <div class="controls" id="controls">

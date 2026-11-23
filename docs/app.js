@@ -28,6 +28,7 @@
     amount: 15,
     habit: 5,
     choice: null,
+    birthday: null,           // 生日月份 1-12
     timelineMode: 'near',     // 'near' | 'far'
     slider: 0,                // 近期按月(0-84)，长期按年(0-30)
     rate: 0.08,
@@ -36,7 +37,9 @@
       money: 0, skill: 0, memory: 0, relation: 0, freedom: 0,
       cash: 0,               // 手上现金（生活费结余）
       done84: false,         // 是否已推进满 84 个月（结算完整标记）
-      events: []             // 已发生事件（含意外）摘要
+      events: [],            // 已发生事件（含意外）摘要
+      decisions: {},         // 月份索引 -> { plan, specialChoice }
+      monthLog: []           // 逐月流水，用于回看
     },
     far: {                    // 长期三线
       actual: 0, ideal: 0, zero: 0,
@@ -114,18 +117,47 @@
     return Math.round(state.budget * 0.55);
   }
 
-  // 校历关键事件（一年里几次真实决策）——简化为一组月度事件
-  var CALENDAR = [
-    { month: 1, name: '开学·教材', cost: 300, pocket: 'skill', note: '教材 + 文具' },
-    { month: 3, name: '四六级报名', cost: 130, pocket: 'skill', note: '考试费' },
-    { month: 5, name: '奥体演唱会', cost: 680, pocket: 'memory', note: '一场演唱会' },
-    { month: 7, name: '暑假·旅行', cost: 1200, pocket: 'memory', note: '短途旅行' },
-    { month: 9, name: '双十一', cost: 600, pocket: 'relation', note: '给家人朋友买点东西' },
-    { month: 11, name: '压岁钱到账', cost: -2000, pocket: 'money', note: '压岁钱' },
-    { month: 12, name: '考研班/技能', cost: 800, pocket: 'skill', note: '自我投资' }
+  // 每月决策选项：玩家把一个月的闲钱分配到这里
+  var DECISIONS = [
+    { key: 'money', label: '存起来', icon: '💰', note: '放进钱袋，等复利', pocket: 'money' },
+    { key: 'skill', label: '买书 / 报课', icon: '📚', note: '考级、考研资料、技能课', pocket: 'skill' },
+    { key: 'memory', label: '攒旅行基金', icon: '🎒', note: '为一次出发攒钱', pocket: 'memory' },
+    { key: 'relation', label: '请客 / 顾家', icon: '🍲', note: '室友聚会、给家里买点', pocket: 'relation' },
+    { key: 'freedom', label: '留作应急', icon: '🛟', note: '应付突然的一天', pocket: 'freedom' }
   ];
 
-  // 意外事件（真实概率掷骰）—— 简化：每年一次机会
+  // 特殊日子：按月份触发的真实情境（大学生活）
+  // kind: 'ask'   = 需要玩家额外决定（花 / 不花）
+  //       'gain'  = 一笔额外收入，自动进账
+  //       'info'  = 只是提示，不改变钱
+  var SPECIAL_DAYS = [
+    { month: 1, key: 'winter-home', kind: 'ask', tag: '寒假', title: '回家过年', text: '回家的车票 400 元。你还会被亲戚问“以后想做什么”。', cost: 400, pocket: 'relation' },
+    { month: 2, key: 'birthday', kind: 'auto-birthday', tag: '生日', title: '你的生日', text: '生日那个月，你总会多花一点，也总会收到一点。' },
+    { month: 2, key: 'lucky-money', kind: 'gain', tag: '春节', title: '压岁钱', text: '长辈给的压岁钱，一笔突然到手的钱。', amount: 2000 },
+    { month: 3, key: 'cet', kind: 'ask', tag: '考试季', title: '四六级 / 计算机二级', text: '报名费 130 元。考不过，明年再来一次。', cost: 130, pocket: 'skill' },
+    { month: 4, key: 'concert', kind: 'ask', tag: '春天', title: '奥体有场演唱会', text: '票 680 元。你会记很久，也可能只是站了三小时。', cost: 680, pocket: 'memory' },
+    { month: 5, key: 'labour', kind: 'ask', tag: '五一', title: '五一假期', text: '室友都出门了。去一趟扬州，两天 500 元。', cost: 500, pocket: 'memory' },
+    { month: 6, key: 'final', kind: 'info', tag: '期末', title: '期末周', text: '打印店排队，通宵，外卖涨到 25 一顿。这个月存不下什么。' },
+    { month: 6, key: 'graduation', kind: 'ask', tag: '毕业季', title: '毕业旅行 / 送别饭', text: '大四的六月，很多人会花掉一大笔。1200 元。', cost: 1200, pocket: 'memory' },
+    { month: 7, key: 'summer', kind: 'ask-travel', tag: '暑假', title: '暑假到了', text: '你攒了一个学期的旅行基金，现在可以决定去哪。' },
+    { month: 8, key: 'intern', kind: 'gain', tag: '实习', title: '实习工资', text: '这个暑假你实习了，拿到一笔钱。', amount: 3000 },
+    { month: 9, key: 'newterm', kind: 'ask', tag: '开学', title: '开学采购', text: '教材、被套、新的耳机。600 元。', cost: 600, pocket: 'skill' },
+    { month: 10, key: 'autumn', kind: 'ask', tag: '秋天', title: '栖霞山 / 秋游', text: '南京的秋天只有几周。一趟 200 元。', cost: 200, pocket: 'memory' },
+    { month: 11, key: 'double11', kind: 'ask', tag: '双十一', title: '双十一', text: '购物车里躺了很久的东西，今晚打折。800 元。', cost: 800, pocket: 'relation' },
+    { month: 12, key: 'newyear', kind: 'ask', tag: '年末', title: '跨年 / 圣诞', text: '朋友约你跨年，人均 300 元。', cost: 300, pocket: 'memory' },
+    { month: 12, key: 'kaoyan', kind: 'ask', tag: '规划', title: '考研班 / 技能课', text: '要不要报？800 元，可能改变你之后几年的方向。', cost: 800, pocket: 'skill' }
+  ];
+
+  // 暑假旅行目的地（南京出发，真实价格）
+  var TRAVELS = [
+    { key: 'yangzhou', name: '扬州', days: 2, cost: 500, desc: '高铁 1 小时，瘦西湖 + 早茶' },
+    { key: 'chengdu', name: '成都', days: 4, cost: 1800, desc: '高铁往返 1080 + 青旅 3 晚 420 + 熊猫基地 27 + 火锅 300' },
+    { key: 'xian', name: '西安', days: 4, cost: 1500, desc: '高铁往返 900 + 青旅 3 晚 300 + 兵马俑 + 吃' },
+    { key: 'sanya', name: '三亚', days: 5, cost: 3200, desc: '机票往返 1600 + 青旅 4 晚 600 + 玩海 + 吃' },
+    { key: 'home', name: '哪也不去', days: 0, cost: 0, desc: '钱留着，暑假在家' }
+  ];
+
+  // 意外事件（真实概率）—— 每年一次机会
   var ACCIDENTS = [
     { name: '手机被偷', chance: 0.06, cost: 2500, pocket: 'freedom', note: '重新买一台' },
     { name: '生病住院', chance: 0.04, cost: 1200, pocket: 'freedom', note: '医保报销后自付' },
@@ -141,14 +173,17 @@
     return year <= habitYears;
   }
 
-  // 近期推进一个月
-  function advanceNearMonth(monthIndex) {
+  // 近期推进一个月（rnd 为固定种子随机数，保证回看时意外稳定）
+  function advanceNearMonth(monthIndex, rnd) {
     var n = state.near;
     // 生活费流入
     var allowance = monthlyAllowance();
     n.cash += allowance;
     // 基础支出
     n.cash -= monthlyBase();
+    // 期末周这种月份额外花销
+    var sp = specialFor(monthIndex);
+
     // 习惯投入：默认每天省一笔（amount），投入"钱袋"（存钱）
     var daily = state.amount;
     var invest = daily * 30; // 每月约省 amount×30
@@ -158,28 +193,18 @@
       n.cash -= invest;
     }
 
-    // 校历事件（每月可能触发一个）
-    var cal = CALENDAR.filter(function (c) { return (monthIndex % 12) === c.month - 1; });
-    cal.forEach(function (c) {
-      var amt = c.cost;
-      if (amt > 0) {
-        // 从对应口袋扣（若不够，从现金补）
-        if (n[c.pocket] >= amt) { n[c.pocket] -= amt; }
-        else { n.cash -= amt; }
-      } else {
-        // 收入类（压岁钱）→ 现金
-        n.cash += -amt;
-      }
-      n.events.push({ t: c.name, y: Math.ceil((monthIndex + 1) / 12), m: (monthIndex % 12) + 1, amt: amt, note: c.note });
-    });
+    // 特殊日子：收入类自动进账
+    if (sp && sp.kind === 'gain') {
+      n.cash += sp.amount;
+      n.events.push({ t: sp.title, y: Math.ceil((monthIndex + 1) / 12), m: (monthIndex % 12) + 1, amt: sp.amount, note: sp.text, special: sp.key });
+    }
 
-    // 意外：每年第一次掷骰
+    // 意外：每年第一次掷骰（用固定种子，回看时结果稳定）
     if ((monthIndex % 12) === 0) {
-      var rnd = Math.random();
       var acc = null;
       var accTotal = 0;
       ACCIDENTS.forEach(function (a) { accTotal += a.chance; });
-      var roll = rnd * accTotal;
+      var roll = (rnd ? rnd() : Math.random()) * accTotal;
       var cursor = 0;
       for (var i = 0; i < ACCIDENTS.length; i++) {
         cursor += ACCIDENTS[i].chance;
@@ -194,13 +219,99 @@
     }
   }
 
-  // 推进到第 month 个月（0-84）
+  /** 取某个月的特殊日子（可能多个，取第一个作为主情境）。 */
+  function specialFor(monthIndex) {
+    var month = (monthIndex % 12) + 1;
+    var list = SPECIAL_DAYS.filter(function (s) { return s.month === month; });
+    return list.length ? list[0] : null;
+  }
+
+  /**
+   * 重放到第 monthIndex 个月：玩家在 state.near.decisions 里的选择会被应用，
+   * 没有记录决策的月份按"默认分配"（全部存起来）处理。
+   */
   function runNearTo(monthIndex) {
     var n = state.near;
-    // 简单实现：从 0 重算到目标月（84 个月最多，性能无碍）
     n.cash = 0; n.money = 0; n.skill = 0; n.memory = 0; n.relation = 0; n.freedom = 0; n.events = [];
-    for (var m = 0; m <= monthIndex; m++) advanceNearMonth(m);
-    n.done84 = monthIndex >= NEAR_MONTHS;
+    n.monthLog = [];
+    // 每年意外结果需要稳定：用固定种子重放，保证回看不乱跳
+    var rnd = mulberry32(20260901 + (state.birthday || 6));
+    for (var m = 0; m <= monthIndex; m++) {
+      advanceNearMonth(m, rnd);
+      // 应用玩家在这个月的决策（如果有）
+      var d = n.decisions[m];
+      if (d && d.plan) applyPlan(m, d.plan);
+      // 应用特殊日子的额外决定
+      if (d && d.specialChoice) applySpecialChoice(m, d.specialChoice);
+    }
+    n.done84 = monthIndex >= NEAR_MONTHS - 1;
+  }
+
+  /** 把本月闲钱按计划分配到各口袋。 */
+  function applyPlan(monthIndex, plan) {
+    var n = state.near;
+    var free = monthFreeMoney(monthIndex);
+    var total = 0;
+    Object.keys(plan).forEach(function (k) { total += plan[k] || 0; });
+    if (total <= 0) return;
+    // 按比例缩放，保证不超过闲钱
+    var scale = free > 0 ? Math.min(1, free / total) : 0;
+    POCKETS.forEach(function (k) {
+      var v = Math.round((plan[k] || 0) * scale);
+      if (v > 0) { n[k] += v; n.cash -= v; }
+    });
+    // 计划里没分完的部分留在现金
+  }
+
+  /** 特殊日子的额外选择（花 / 不花 / 旅行）。 */
+  function applySpecialChoice(monthIndex, choice) {
+    var n = state.near;
+    var sp = specialFor(monthIndex);
+    if (!sp) return;
+    var y = Math.ceil((monthIndex + 1) / 12);
+    var m = (monthIndex % 12) + 1;
+    var d = n.decisions[monthIndex] || {};
+
+    if (choice === 'travel') {
+      var cost = d.travelCost || 0;
+      var name = d.travelName || '旅行';
+      if (cost > 0) {
+        // 先用旅行基金（经历袋），不够再从现金补
+        if (n.memory >= cost) { n.memory -= cost; }
+        else {
+          var rest = cost - n.memory;
+          n.memory = 0;
+          n.cash -= rest;
+        }
+        n.events.push({ t: '去了' + name, y: y, m: m, amt: -cost, note: '你出发了', special: sp.key, chosen: true });
+      } else {
+        n.events.push({ t: '暑假留在家', y: y, m: m, amt: 0, note: '你把钱留下来了', special: sp.key, chosen: false });
+      }
+      return;
+    }
+
+    if (!sp.cost) return;
+    if (choice === 'yes') {
+      var amt = sp.cost;
+      if (n[sp.pocket] >= amt) n[sp.pocket] -= amt;
+      else n.cash -= amt;
+      n.events.push({ t: sp.title, y: y, m: m, amt: -amt, note: sp.text, special: sp.key, chosen: true });
+    } else if (choice === 'skip') {
+      n.events.push({ t: sp.title, y: y, m: m, amt: 0, note: '你放弃了：' + sp.title, special: sp.key, chosen: false });
+    }
+  }
+
+  /** 本月可自由分配的闲钱。 */
+  function monthFreeMoney(monthIndex) {
+    var n = state.near;
+    var allowance = monthlyAllowance();
+    if (state.grade === 'grad') allowance += 0; // 补贴已含在 monthlyAllowance 里
+    var base = monthlyBase();
+    // 特殊日子的收入类先加到现金（重放时已处理），这里只算"可支配"
+    var sp = specialFor(monthIndex);
+    var extra = sp && sp.kind === 'gain' ? sp.amount : 0;
+    var habitCut = state.amount * 30;
+    return Math.max(0, allowance + extra - base - habitCut);
   }
 
   function nearPocketTotal() {
@@ -431,63 +542,7 @@
     var info = {};
 
     if (state.timelineMode === 'near') {
-      var month = state.slider;
-      runNearTo(month);
-      var year = Math.floor(month / 12);
-      var m = (month % 12) + 1;
-      var total = nearPocketTotal();
-
-      var valueNum = $('#valueNum');
-      var valueUnit = $('#valueUnit');
-      var readout = $('.readout-value');
-
-      if (state.choice === 'learn') {
-        readout.classList.add('is-text');
-        valueNum.textContent = '能力';
-        valueUnit.textContent = '不可计算';
-        $('#readoutLabel').textContent = month === 0 ? '现在' : '第 ' + year + ' 年 · 第 ' + m + ' 月';
-        $('#ghostLine').textContent = '能力袋里的东西，不算钱';
-      } else {
-        readout.classList.remove('is-text');
-        var parts = readoutParts(total);
-        valueNum.textContent = parts.num;
-        valueUnit.textContent = parts.unit;
-        $('#readoutLabel').textContent = month === 0 ? '现在 · 七年的第一天' : '第 ' + year + ' 年 · 第 ' + m + ' 月';
-        $('#ghostLine').textContent = '五口袋合计：' + fmtMoney(total) +
-          ' · 手上现金 ' + fmtMoney(state.near.cash);
-      }
-
-      // 五口袋条
-      var segs = { money: $('#pocketMoney'), skill: $('#pocketSkill'), memory: $('#pocketMemory'), relation: $('#pocketRelation'), freedom: $('#pocketFreedom') };
-      var maxPocket = Math.max(nearPocketTotal(), 1);
-      POCKETS.forEach(function (k) {
-        var seg = segs[k];
-        seg.setAttribute('data-name', POCKET_NAMES[k]);
-        seg.style.width = (state.near[k] / maxPocket * 100) + '%';
-      });
-
-      // 口袋列表
-      var list = $('#pocketList');
-      list.innerHTML = '';
-      POCKETS.forEach(function (k) {
-        var row = document.createElement('div');
-        row.className = 'pocket-row';
-        var note = '';
-        if (k === 'money') note = '存下来的钱';
-        if (k === 'skill') note = '书/课/证/考研';
-        if (k === 'memory') note = '旅行/演唱会/经历';
-        if (k === 'relation') note = '请客/家人/朋友';
-        if (k === 'freedom') note = '应急备用金';
-        row.innerHTML = '<span><span class="p-dot" style="background:' + POCKET_COLORS[k] + '"></span><span class="p-name">' + POCKET_NAMES[k] + '</span> <span class="p-note">' + note + '</span></span>' +
-          '<span class="p-value">' + fmtMoney(state.near[k]) + '</span>';
-        list.appendChild(row);
-      });
-
-      $('#narration').textContent = narrationNear(month);
-
-      // 近期读数随拖动更新标签
-      var slider = $('#timeSlider');
-      slider.style.setProperty('--p', (month / NEAR_MONTHS * 100) + '%');
+      renderNear();
 
     } else {
       // 长期
@@ -522,14 +577,274 @@
   var POCKET_NAMES = { money: '钱', skill: '能力', memory: '经历', relation: '关系', freedom: '选择权' };
   var POCKET_COLORS = { money: '#c9a86a', skill: '#7fa8a0', memory: '#d98a6a', relation: '#b58cb0', freedom: '#8fa3c9' };
 
-  function narrationNear(month) {
-    if (month === 0) return '从今天开始。每个月，钱会自己流进五个口袋。';
+  /* ---------- 近期：每月决策界面 ---------- */
+
+  /** 本月的决策是否已完成（分配过，或该月无闲钱）。 */
+  function monthDecided(monthIndex) {
+    var d = state.near.decisions[monthIndex];
+    if (d && d.plan) return true;
+    return monthFreeMoney(monthIndex) <= 0;
+  }
+
+  /** 找到下一个还没决策的月份，没有则返回 NEAR_MONTHS。 */
+  function nextUndecided(from) {
+    for (var m = Math.max(0, from); m < NEAR_MONTHS; m++) {
+      if (!monthDecided(m)) return m;
+    }
+    return NEAR_MONTHS;
+  }
+
+  function renderNear() {
+    var month = Math.max(0, Math.min(NEAR_MONTHS - 1, state.slider));
+    state.slider = month;
+    runNearTo(month);
+    syncHeader(month);
+
     var year = Math.floor(month / 12) + 1;
     var m = (month % 12) + 1;
-    if (m === 1) return '第 ' + year + ' 年开始了。';
-    if (m === 6) return '第 ' + year + ' 年 · 年中。钱在五个口袋之间流动。';
-    if (m === 12) return '第 ' + year + ' 年 · 年末。这一年攒下了 ' + fmtMoney(nearPocketTotal()) + '。';
-    return '第 ' + year + ' 年 · 第 ' + m + ' 月。日子在过，账本在记。';
+    var label = '第 ' + year + ' 年 · ' + m + ' 月';
+    $('#monthBadge').textContent = label;
+    $('#monthLeft').textContent = '还剩 ' + (NEAR_MONTHS - month - 1) + ' 次决定';
+    $('#readoutLabel').textContent = label;
+
+    var free = monthFreeMoney(month);
+    var sp = specialFor(month);
+
+    // 收入卡片
+    $('#incAllow').textContent = fmtMoney(monthlyAllowance());
+    if (sp && sp.kind === 'gain') {
+      $('#incExtraRow').hidden = false;
+      $('#incExtraLabel').textContent = sp.title;
+      $('#incExtra').textContent = '+' + fmtMoney(sp.amount);
+    } else {
+      $('#incExtraRow').hidden = true;
+    }
+    $('#incBase').textContent = '−' + fmtMoney(monthlyBase() + state.amount * 30);
+    $('#incFree').textContent = fmtMoney(free);
+
+    // 特殊日子卡片
+    var spBody = $('#specialBody');
+    if (sp) {
+      $('#specialCard').hidden = false;
+      $('#specialTag').textContent = sp.tag;
+      $('#specialText').textContent = sp.title + '：' + sp.text;
+      spBody.innerHTML = '';
+
+      if (decided && decided.specialChoice) {
+        spBody.innerHTML = '<p class="special-done">' +
+          (decided.specialChoice === 'yes' ? '你选择了：' + sp.title + '（−' + fmtMoney(sp.cost || 0) + '）'
+            : decided.specialChoice === 'skip' ? '你放弃了：' + sp.title
+              : '你选择了：' + (decided.travelName || '出发')) + '</p>';
+      } else if (sp.kind === 'ask') {
+        spBody.innerHTML =
+          '<button class="mini-btn yes" data-special="yes">花 ' + fmtMoney(sp.cost) + '，' + sp.title + '</button>' +
+          '<button class="mini-btn no" data-special="skip">算了，这次不去</button>';
+      } else if (sp.kind === 'ask-travel') {
+        var opts = TRAVELS.map(function (t) {
+          var afford = nearPocketTotal() + state.near.cash >= t.cost;
+          return '<button class="mini-btn travel' + (afford ? '' : ' unaffordable') + '" data-travel="' + t.key + '">' +
+            '<b>' + t.name + '</b><small>' + (t.cost > 0 ? fmtMoney(t.cost) : '不花钱') + ' · ' + t.desc + '</small></button>';
+        }).join('');
+        spBody.innerHTML = opts;
+      } else if (sp.kind === 'gain') {
+        spBody.innerHTML = '<p class="special-done">自动到账 ' + fmtMoney(sp.amount) + '</p>';
+      } else {
+        spBody.innerHTML = '';
+      }
+    } else {
+      $('#specialCard').hidden = true;
+    }
+
+    // 决策按钮
+    var grid = $('#decideGrid');
+    var decided = state.near.decisions[month];
+    if (free <= 0) {
+      $('#decideTitle').textContent = '这个月没有闲钱可以分。';
+      grid.innerHTML = '<p class="decide-empty">生活费刚好够用。很多人是这样过的。</p>';
+    } else if (decided && decided.plan) {
+      $('#decideTitle').textContent = '你已经安排了这个月。';
+      grid.innerHTML = '';
+      POCKETS.forEach(function (k) {
+        var v = decided.plan[k] || 0;
+        if (v <= 0) return;
+        var div = document.createElement('div');
+        div.className = 'decide-item is-done';
+        div.innerHTML = '<span class="d-icon">' + POCKET_ICONS[k] + '</span>' +
+          '<span class="d-body"><b>' + POCKET_NAMES[k] + '</b><small>' + fmtMoney(v) + '</small></span>';
+        grid.appendChild(div);
+      });
+    } else {
+      $('#decideTitle').textContent = '这 ' + fmtMoney(free) + ' 闲钱，你想怎么放？';
+      grid.innerHTML = '';
+      DECISIONS.forEach(function (d) {
+        var btn = document.createElement('button');
+        btn.className = 'decide-item';
+        btn.setAttribute('data-decide', d.key);
+        btn.innerHTML = '<span class="d-icon">' + d.icon + '</span>' +
+          '<span class="d-body"><b>' + d.label + '</b><small>' + d.note + '</small></span>';
+        grid.appendChild(btn);
+      });
+    }
+
+    // 本月账本
+    renderMonthLog(month);
+
+    // 身上现金与五口袋
+    var total = nearPocketTotal();
+    var readout = $('.readout-value');
+    if (state.choice === 'learn') {
+      readout.classList.add('is-text');
+      $('#valueNum').textContent = '能力';
+      $('#valueUnit').textContent = '不可测算';
+    } else {
+      readout.classList.remove('is-text');
+      var parts = readoutParts(total);
+      $('#valueNum').textContent = parts.num;
+      $('#valueUnit').textContent = parts.unit;
+    }
+    $('#ghostLine').textContent = '五口袋 ' + fmtMoney(total) + ' · 手上现金 ' + fmtMoney(state.near.cash);
+
+    renderPockets();
+    $('#narration').textContent = narrationNear(month, sp);
+    $('#timeSlider').style.setProperty('--p', (month / (NEAR_MONTHS - 1) * 100) + '%');
+  }
+
+  /** 顶部三行摘要（身份 / 学校 / 生日）。 */
+  function syncHeader() {
+    // 目前不需要额外元素，保留钩子便于后续加抬头信息
+  }
+
+  function renderPockets() {
+    var segs = { money: $('#pocketMoney'), skill: $('#pocketSkill'), memory: $('#pocketMemory'), relation: $('#pocketRelation'), freedom: $('#pocketFreedom') };
+    var maxPocket = Math.max(nearPocketTotal(), 1);
+    POCKETS.forEach(function (k) {
+      var seg = segs[k];
+      if (!seg) return;
+      seg.setAttribute('data-name', POCKET_NAMES[k]);
+      seg.style.width = (state.near[k] / maxPocket * 100) + '%';
+    });
+
+    var list = $('#pocketList');
+    list.innerHTML = '';
+    POCKETS.forEach(function (k) {
+      var row = document.createElement('div');
+      row.className = 'pocket-row';
+      var note = POCKET_NOTES[k];
+      row.innerHTML = '<span><span class="p-dot" style="background:' + POCKET_COLORS[k] + '"></span>' +
+        '<span class="p-name">' + POCKET_NAMES[k] + '</span> <span class="p-note">' + note + '</span></span>' +
+        '<span class="p-value">' + fmtMoney(state.near[k]) + '</span>';
+      list.appendChild(row);
+    });
+  }
+
+  /** 本月账本：收入、支出、决策带来的变化。 */
+  function renderMonthLog(month) {
+    var wrap = $('#monthLogWrap');
+    var body = $('#monthLog');
+    var events = state.near.events.filter(function (e) { return e.y === Math.floor(month / 12) + 1 && e.m === (month % 12) + 1; });
+    var decided = state.near.decisions[month];
+    var lines = [];
+
+    if (events.length === 0 && !(decided && decided.plan)) {
+      wrap.hidden = true;
+      return;
+    }
+    wrap.hidden = false;
+
+    if (decided && decided.plan) {
+      POCKETS.forEach(function (k) {
+        var v = decided.plan[k] || 0;
+        if (v > 0) lines.push('<div class="log-line"><span>' + POCKET_ICONS[k] + ' 放入' + POCKET_NAMES[k] + '</span><b>−' + fmtMoney(v) + '</b></div>');
+      });
+    }
+    events.forEach(function (e) {
+      var cls = e.accident ? ' accident' : (e.amt < 0 ? ' spend' : ' gain');
+      var sign = e.amt > 0 ? '+' : (e.amt < 0 ? '−' : '');
+      var amtText = e.amt === 0 ? '放弃' : sign + fmtMoney(Math.abs(e.amt));
+      lines.push('<div class="log-line' + cls + '"><span>' + e.t + ' <small>' + e.note + '</small></span><b>' + amtText + '</b></div>');
+    });
+    body.innerHTML = lines.join('') || '<div class="log-line"><span>这个月没有特别的事</span><b>—</b></div>';
+  }
+
+  var POCKET_ICONS = { money: '💰', skill: '📚', memory: '🎒', relation: '🍲', freedom: '🛟' };
+  var POCKET_NOTES = {
+    money: '存下来的钱',
+    skill: '书 / 课 / 证 / 考研',
+    memory: '旅行 / 演唱会 / 经历',
+    relation: '请客 / 家人 / 朋友',
+    freedom: '应急备用金'
+  };
+
+  /** 玩家点了某个分配选项：把钱放进对应口袋。 */
+  function decidePocket(key) {
+    var month = state.slider;
+    var free = monthFreeMoney(month);
+    if (free <= 0) return;
+    var plan = {};
+    plan[key] = free;
+    state.near.decisions[month] = { plan: plan };
+    runNearTo(month);
+    renderNear();
+  }
+
+  /** 特殊日子的花 / 不花。 */
+  function decideSpecial(choice) {
+    var month = state.slider;
+    var d = state.near.decisions[month] || {};
+    d.specialChoice = choice;
+    state.near.decisions[month] = d;
+    runNearTo(month);
+    renderNear();
+  }
+
+  /** 暑假：选一个目的地（真实价格，南京出发）。 */
+  function chooseTravel(key) {
+    var month = state.slider;
+    var trip = null;
+    TRAVELS.forEach(function (t) { if (t.key === key) trip = t; });
+    if (!trip) return;
+
+    var d = state.near.decisions[month] || {};
+    d.specialChoice = trip.cost > 0 ? 'travel' : 'skip';
+    d.travelKey = key;
+    d.travelName = trip.name;
+    d.travelCost = trip.cost;
+    state.near.decisions[month] = d;
+    runNearTo(month);
+    renderNear();
+  }
+
+  /** 下一个月。 */
+  function nextMonth() {
+    if (state.slider >= NEAR_MONTHS - 1) {
+      go('reveal');
+      return;
+    }
+    state.slider = state.slider + 1;
+    $('#timeSlider').value = state.slider;
+    renderNear();
+  }
+
+  /** 重来这一个月。 */
+  function resetMonth() {
+    delete state.near.decisions[state.slider];
+    runNearTo(state.slider);
+    renderNear();
+  }
+
+  function narrationNear(month, sp) {
+    var d = state.near.decisions[month];
+    if (d && d.plan) {
+      var picked = Object.keys(d.plan).filter(function (k) { return d.plan[k] > 0; });
+      if (picked.length) {
+        return '你把这笔钱放进了' + picked.map(function (k) { return POCKET_NAMES[k]; }).join('、') +
+          '。第 ' + (month + 1) + ' 个月，就这样过去了。';
+      }
+    }
+    if (sp && sp.kind === 'gain') return sp.title + '：' + sp.text;
+    if (sp) return sp.title + '。' + sp.text;
+    if (month === 0) return '毕业前还有 ' + NEAR_MONTHS + ' 个月。每一个月，你都要决定一次。';
+    return '第 ' + (month + 1) + ' 个月。这个月没什么特别的事，日子照样过。';
   }
 
   function narrationFar(y, actual, ideal) {
@@ -972,6 +1287,28 @@
     document.addEventListener('click', function (event) {
       var node = event.target;
       if (!node || typeof node.closest !== 'function') return;
+
+      // 本月分配：五选一
+      var decide = node.closest('[data-decide]');
+      if (decide) {
+        decidePocket(decide.getAttribute('data-decide'));
+        return;
+      }
+
+      // 特殊日子：花 / 不花
+      var special = node.closest('[data-special]');
+      if (special) {
+        decideSpecial(special.getAttribute('data-special'));
+        return;
+      }
+
+      // 暑假旅行：选目的地
+      var travel = node.closest('[data-travel]');
+      if (travel) {
+        chooseTravel(travel.getAttribute('data-travel'));
+        return;
+      }
+
       var nav = node.closest('[data-go]');
       if (nav) {
         go(nav.getAttribute('data-go'));
@@ -983,6 +1320,19 @@
 
     $('#amount').addEventListener('input', function () { readInputs(false); });
     $('#amount').addEventListener('blur', function () { readInputs(true); });
+
+    $('#nextMonthBtn').addEventListener('click', function () {
+      // 该月还没决定且有钱可决定 → 先提醒，不硬跳
+      if (state.timelineMode === 'near' && !monthDecided(state.slider) && monthFreeMoney(state.slider) > 0) {
+        $('#decideTitle').textContent = '先决定这个月这笔钱怎么放，再往下走。';
+        $('#decideGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (state.timelineMode === 'near') nextMonth();
+      else go('reveal');
+    });
+
+    $('#resetMonthBtn').addEventListener('click', resetMonth);
 
     $('#timeSlider').addEventListener('input', function () {
       if (playRaf) { cancelAnimationFrame(playRaf); playRaf = 0; setPlayLabel(false); }
