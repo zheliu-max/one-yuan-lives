@@ -35,6 +35,7 @@
     near: {                   // 近期账本（五口袋累计）
       money: 0, skill: 0, memory: 0, relation: 0, freedom: 0,
       cash: 0,               // 手上现金（生活费结余）
+      done84: false,         // 是否已推进满 84 个月（结算完整标记）
       events: []             // 已发生事件（含意外）摘要
     },
     far: {                    // 长期三线
@@ -196,10 +197,10 @@
   // 推进到第 month 个月（0-84）
   function runNearTo(monthIndex) {
     var n = state.near;
-    var start = n.events.length === 0 ? 0 : monthIndex; // 简化：从 0 重新算
     // 简单实现：从 0 重算到目标月（84 个月最多，性能无碍）
     n.cash = 0; n.money = 0; n.skill = 0; n.memory = 0; n.relation = 0; n.freedom = 0; n.events = [];
     for (var m = 0; m <= monthIndex; m++) advanceNearMonth(m);
+    n.done84 = monthIndex >= NEAR_MONTHS;
   }
 
   function nearPocketTotal() {
@@ -295,8 +296,17 @@
     window.scrollTo(0, 0);
     if (name === 'machine') { prepareMachine(); }
     if (name === 'reveal') { drawStars(); }
+    if (name === 'ending' || name === 'report') { ensureLedger(); }
     if (name === 'ending') { renderEnding(); }
     if (name === 'report') { renderReport(); }
+  }
+
+  // 结算前确保近期账本已跑满（深链直达 ending/report 时也能拿到真实数字）
+  function ensureLedger() {
+    if (!state.near.done84) {
+      runNearTo(NEAR_MONTHS);
+      state.slider = NEAR_MONTHS;
+    }
   }
 
   /* 身份 */
@@ -396,7 +406,14 @@
       $('#rollBtn').hidden = true;
     } else {
       slider.min = 0; slider.max = FAR_YEARS; slider.step = 1;
-      if (state.slider < NEAR_MONTHS) state.slider = NEAR_MONTHS + 1; // 跳转到长期
+      // 长期模式依赖近期账本做种子：切过来时若账本未跑满，先补跑七年
+      if (!state.near.done84) {
+        runNearTo(NEAR_MONTHS);
+        state.near.done84 = true;
+      }
+      // 把 slider 钳到 0..30（年）。若之前停留在近期月份（0..84），
+      // 直接跳到长期的第一年，避免越界产生 NaN。
+      if (state.slider > FAR_YEARS) state.slider = 0;
       $('#tlMid').textContent = '15 年';
       $('#tlEnd').textContent = '30 年';
       $('#nearStage').hidden = true;
@@ -938,7 +955,7 @@
     state.budget = 1800; state.amount = 15; state.habit = 5;
     state.choice = null; state.timelineMode = 'near'; state.slider = 0;
     state.rate = 0.08; state.inflation = false;
-    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [] };
+    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], done84: false };
     state.far = { actual: 0, ideal: 0, zero: 0, years: 0, series: { actual: [], ideal: [], zero: [] } };
     $('#inflationToggle').checked = false;
     $$('.chip').forEach(function (c) { c.classList.remove('is-on'); });
@@ -1027,7 +1044,22 @@
     var mode = params.get('mode');
     if (mode === 'near' || mode === 'far') state.timelineMode = mode;
     if (hash === 'setup') { go(hash); return true; }
-    pendingSlider = params.get('y') !== null ? parseFloat(params.get('y')) || 0 : null;
+    // 长期模式依赖近期账本做种子：直达 far 屏时先补跑七年
+    if (state.timelineMode === 'far' && (hash === 'machine' || hash === 'ending' || hash === 'report')) {
+      if (!state.near.done84) {
+        runNearTo(NEAR_MONTHS);
+        state.near.done84 = true;
+      }
+    }
+    // y 按模式解释：near 是月份 0..84，far 是年份 0..30
+    var rawY = parseFloat(params.get('y'));
+    if (isFinite(rawY)) {
+      pendingSlider = state.timelineMode === 'far'
+        ? Math.min(FAR_YEARS, Math.max(0, rawY))
+        : Math.min(NEAR_MONTHS, Math.max(0, rawY));
+    } else {
+      pendingSlider = null;
+    }
     go(hash);
     return true;
   }
