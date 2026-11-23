@@ -693,6 +693,23 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   .season-layer { display: none; }
 }
 
+.comp-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.comp-chip { padding: 7px 12px; font-size: 12.5px; }
+.comp-hint {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: #9a8b78;
+}
+.rel-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(217, 201, 179, .6);
+}
+.rel-row b { color: var(--jade); font-variant-numeric: tabular-nums; }
+
 /* 回放卡 */
 .recap-card {
   padding: 16px;
@@ -746,6 +763,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 .recap-item.accident { color: #b3402c; font-weight: 600; }
 .recap-item.accident .r-amt { color: #b3402c; }
 .recap-item.skip { color: #9a8b78; }
+.recap-item.romance { color: #b5476f; font-weight: 600; }
 .recap-item.spend .r-amt { color: var(--warm); }
 @keyframes recapIn {
   from { opacity: 0; transform: translateY(8px); }

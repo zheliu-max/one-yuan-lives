@@ -81,6 +81,17 @@ check('回放可跳过', html.includes('id="recapSkip"') && js.includes('functio
 check('回放有播放逻辑', js.includes('function playRecap') && js.includes('function buildRecapItems'))
 check('回放结束进入反转', js.includes("go('reveal')"))
 
+// v3.2：事件生成器
+check('有歌手池（含抢票热度）', js.includes('var ARTISTS') && js.includes('hot:'))
+check('有朋友列表（含生日）', js.includes('var FRIENDS') && js.includes('birthday:'))
+check('有旅行目的地池', js.includes('var TRAVEL_POOL'))
+check('有同行者选项', js.includes('var COMPANIONS'))
+check('有事件生成器', js.includes('function buildEvent') && js.includes('function eventFor'))
+check('有事件缓存（回放确定性）', js.includes('eventCache'))
+check('演唱会有抢票结果与黄牛', js.includes('scalper') && js.includes('win:'))
+check('旅行可遇见人', js.includes('romance'))
+check('朋友生日影响关系值', js.includes('addRelation'))
+
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
 const fvSingle = (p, r, n) => p * Math.pow(1 + r, n)
