@@ -44,11 +44,22 @@ session 4f1c2a90 · turn 7
 
 ## 自检
 
-包内自带一份端到端测试，用真实的 git 仓库跑 `apply()` + `turn/end` 通知，覆盖正常提交、无改动、非仓库目录、子目录范围、子代理、停用、自定义前缀和连续两回合：
+包内自带一份端到端测试，用真实的 git 仓库跑 `apply()` + `turn/end` 通知，覆盖正常提交、无改动、非仓库目录、子目录范围、子代理、停用、自定义前缀、连续两回合、系统注入文本过滤、推送失败不丢提交、无 remote 静默：
 
 ```
 node plugins/git-autosave/test/e2e.mjs
 ```
+
+### 自动推送的凭据
+
+开启 `push` 后，推送由主机上的 git 自行认证；插件本身不接触任何令牌。推荐配置 Git Credential Manager 一次，之后免交互：
+
+```powershell
+git config --global credential.helper manager
+# 首次推送时按提示登录一次，凭据由系统凭据管理器保存
+```
+
+若凭据缺失或过期，推送会失败——**本地提交仍然保留**，只写一条警告，不会丢代码。
 
 ## 已知限制
 
