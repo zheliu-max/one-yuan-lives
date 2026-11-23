@@ -166,9 +166,25 @@
     </div>
 
     <div id="nearStage">
+      <div class="pace-seg" id="paceSeg" role="group" aria-label="节奏">
+        <button class="pace-item is-on" data-pace="monthly">逐月 · 每月都决定</button>
+        <button class="pace-item" data-pace="yearly">学年 · 定方案自动跑</button>
+      </div>
+
       <div class="month-head">
         <span class="month-badge" id="monthBadge">第 1 年 · 9 月</span>
         <span class="month-left" id="monthLeft">还剩 83 次决定</span>
+      </div>
+
+      <div class="plan-card" id="planCard" hidden>
+        <p class="plan-title" id="planTitle">这一年，你的钱怎么分？</p>
+        <p class="plan-sub" id="planSub">定一个方案，之后每个月自动按它走。特殊日子会叫你。</p>
+        <div class="plan-list" id="planList"></div>
+      </div>
+
+      <div class="year-settle" id="yearSettle" hidden>
+        <p class="settle-title" id="settleTitle">大一结束了</p>
+        <div class="settle-body" id="settleBody"></div>
       </div>
 
       <div class="income-card" id="incomeCard">
@@ -294,6 +310,7 @@
 
     <p class="reveal-line strong">这三个人，都是你。</p>
     <p class="fineprint" id="taxLine"></p>
+    <p class="fineprint" id="paceLine" hidden></p>
 
     <button class="btn" data-go="report">生成我的纪念海报</button>
   </section>

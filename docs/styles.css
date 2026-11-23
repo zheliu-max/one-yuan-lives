@@ -469,6 +469,77 @@ body[data-season="winter"] {
   height: auto;
 }
 
+/* 节奏切换 / 学年方案 / 学年结算 */
+.pace-seg {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, .7);
+}
+.pace-item {
+  flex: 1;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease;
+}
+.pace-item.is-on { background: var(--warm); color: #fff8ef; }
+
+.plan-card, .year-settle {
+  padding: 14px 15px;
+  border: 1px solid #e4c9a8;
+  border-radius: 14px;
+  background: #fff8ec;
+  margin-bottom: 12px;
+}
+.plan-title, .settle-title {
+  margin: 0 0 4px;
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 17px;
+  font-weight: 600;
+}
+.plan-sub { margin: 0 0 10px; font-size: 12.5px; color: var(--ink-soft); }
+.plan-list { display: flex; flex-direction: column; gap: 8px; }
+.plan-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.plan-item:hover { border-color: #c3a985; transform: translateY(-1px); }
+.plan-item.is-on { border-color: var(--warm); background: #fff2e2; }
+.plan-icon { font-size: 19px; }
+.plan-body { display: flex; flex-direction: column; gap: 2px; }
+.plan-body b { font-size: 14.5px; }
+.plan-body small { font-size: 11.5px; color: var(--ink-soft); }
+
+.settle-body { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+.settle-line { display: flex; justify-content: space-between; font-size: 13.5px; }
+.settle-line b { color: var(--warm); font-variant-numeric: tabular-nums; }
+.settle-quote {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #6b5f54;
+  line-height: 1.6;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
 /* 五口袋 */
 .pocket-bar {
   display: flex;
