@@ -64,6 +64,16 @@ check('真实价格：高铁 679', js.includes('679'))
 check('真实价格：四六级 30 元', js.includes('笔试 30 元'))
 check('真实价格：熊猫基地 27', js.includes('27'))
 
+// v3：一屏一卡 / 自动推进 / 进度 / 氛围
+check('v3 有学年进度条容器', html.includes('id="yearStrip"'))
+check('v3 有每月一句话', html.includes('id="flavorLine"') && js.includes('var FLAVOR'))
+check('v3 有自动推进逻辑', js.includes('function maybeAdvance'))
+check('v3 有暂停按钮', html.includes('id="pauseBtn"'))
+check('v3 有账本抽屉', html.includes('id="ledgerDrawer"'))
+check('v3 有季节粒子层', html.includes('id="seasonLayer"') && css.includes('.season-layer'))
+const flavorMonths = [...((js.match(/var FLAVOR = \{([\s\S]*?)\n  \};/) || [])[1] || '').matchAll(/^\s+(\d+):/gm)].length
+check('v3 每月都有旁白（12 个月）', flavorMonths === 12, `实际 ${flavorMonths}`)
+
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
 const fvSingle = (p, r, n) => p * Math.pow(1 + r, n)

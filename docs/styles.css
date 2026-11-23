@@ -540,6 +540,159 @@ body[data-season="winter"] {
   border-top: 1px dashed var(--line);
 }
 
+/* v3：一屏一卡 + 自动翻页 */
+.machine-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.machine-top .mode-seg { flex: 1; margin: 0; }
+.icon-btn {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(255, 250, 241, .8);
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.icon-btn:hover { border-color: #c3a985; color: var(--ink); }
+.icon-btn.is-on { background: var(--warm); border-color: var(--warm); color: #fff8ef; }
+
+.month-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.month-bar-right { display: flex; align-items: center; gap: 8px; }
+.pause-btn {
+  width: 30px; height: 30px; font-size: 13px;
+  opacity: .85;
+}
+
+/* 学年 12 格进度 */
+.year-strip {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+.year-cell {
+  flex: 1;
+  height: 7px;
+  border-radius: 3px;
+  background: #e3d5c1;
+  transition: background .25s ease, transform .25s ease;
+}
+.year-cell.is-done { background: var(--gold); }
+.year-cell.is-now { background: var(--warm); transform: scaleY(1.5); }
+.year-cell.is-break { background: #cfd8dd; }
+
+/* 当月卡 */
+.month-card {
+  padding: 16px 16px 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 10px 26px rgba(90, 64, 36, .08);
+  margin-bottom: 10px;
+}
+.month-card.flip-in { animation: cardIn .42s cubic-bezier(.2, .7, .3, 1); }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateX(16px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+.month-card.auto-move { animation: autoMove .5s cubic-bezier(.3, .8, .4, 1); }
+@keyframes autoMove {
+  0% { transform: none; }
+  40% { transform: translateX(-6px); opacity: .75; }
+  100% { transform: none; opacity: 1; }
+}
+
+.income-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  text-align: left;
+}
+.income-summary .chev { font-size: 11px; opacity: .6; transition: transform .2s ease; }
+.income-summary.is-open .chev { transform: rotate(180deg); }
+.income-detail { padding: 10px 0 4px; display: flex; flex-direction: column; gap: 6px; }
+
+.flavor-line {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: 12.5px;
+  color: #9a8b78;
+  line-height: 1.6;
+}
+
+.drawer {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 250, 241, .75);
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: drawerIn .28s ease;
+}
+@keyframes drawerIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+.drawer-section { display: flex; flex-direction: column; gap: 8px; }
+.drawer-title { font-size: 12px; letter-spacing: .14em; color: var(--warm); }
+
+.next-btn { margin-top: 14px; }
+
+/* 季节粒子 */
+.season-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.season-layer i {
+  position: absolute;
+  top: -8vh;
+  left: var(--x);
+  width: var(--s);
+  height: var(--s);
+  opacity: 0;
+  animation: fall var(--d) linear var(--delay) infinite;
+}
+@keyframes fall {
+  0% { transform: translateY(-8vh) rotate(0deg); opacity: 0; }
+  12% { opacity: .75; }
+  85% { opacity: .55; }
+  100% { transform: translateY(112vh) rotate(420deg); opacity: 0; }
+}
+body[data-season="spring"] .season-layer i { background: #e9a8b8; border-radius: 60% 40% 55% 45%; }
+body[data-season="summer"] .season-layer i { background: #f0cf7a; border-radius: 50%; filter: blur(.4px); }
+body[data-season="autumn"] .season-layer i { background: #cf7a42; border-radius: 65% 35% 60% 40%; }
+body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius: 50%; }
+@media (prefers-reduced-motion: reduce) {
+  .season-layer { display: none; }
+}
+
 /* 五口袋 */
 .pocket-bar {
   display: flex;

@@ -29,6 +29,7 @@
     habit: 5,
     birthday: null,           // 生日月份 1-12
     pace: 'monthly',          // 'monthly' 逐月 | 'yearly' 学年方案
+    autoPaused: false,        // 自动推进是否暂停
     timelineMode: 'near',     // 'near' | 'far'
     slider: 0,                // 近期按月(0-84)，长期按年(0-30)
     rate: 0.08,
@@ -587,9 +588,12 @@
       $('#farStage').hidden = true;
       $('#rollBtn').hidden = true;
       $('#paceSeg').hidden = false;
-      $('#readoutBox').hidden = false;
+      $('#readoutBox').hidden = true;        // 近期：主卡已表达清楚，读数收进抽屉
       $('#timelineWrap').hidden = false;
+      $('#ledgerDrawer').hidden = true;
+      $('#ledgerToggle').classList.remove('is-on');
       $('#nextMonthBtn').textContent = state.slider >= NEAR_MONTHS - 1 ? '看结局 →' : '下一个月 →';
+      if (document.querySelector('#seasonLayer').childElementCount === 0) buildSeasonParticles();
     } else {
       slider.min = 0; slider.max = FAR_YEARS; slider.step = 1;
       // 长期模式依赖近期账本做种子：切过来时若账本未跑满，先补跑七年
@@ -681,12 +685,22 @@
     var parts = monthParts(month);
     var label = '第 ' + parts.year + ' 年 · ' + parts.month + ' 月';
     $('#monthBadge').textContent = label;
-    $('#monthLeft').textContent = '还剩 ' + (NEAR_MONTHS - month - 1) + ' 次决定';
+    $('#monthLeft').textContent = (NEAR_MONTHS - month - 1) + ' 次';
     $('#readoutLabel').textContent = label;
+    renderYearStrip();
+    renderFlavor(month);
 
     var free = monthFreeMoney(month);
     var sp = specialFor(month);
     var decided = state.near.decisions[month];
+
+    // 收入摘要（一行），明细点开才看
+    var summaryEl = $('#incomeSummaryText');
+    if (summaryEl) {
+      summaryEl.textContent = free > 0
+        ? '这个月能决定 ' + fmtMoney(free)
+        : '这个月没有闲钱';
+    }
 
     // 收入卡片
     $('#incAllow').textContent = fmtMoney(monthlyAllowance());
@@ -751,7 +765,7 @@
     if (state.pace === 'yearly' && !yearPlan) {
       // 学年开始（或刚切到学年模式）：先定方案
       planCard.hidden = false;
-      $('#incomeCard').hidden = true;
+      setIncomeVisible(false);
       $('#planTitle').textContent = '第 ' + (y + 1) + ' 年，你的钱怎么分？';
       var plist = $('#planList');
       plist.innerHTML = '';
@@ -769,14 +783,14 @@
     } else if (state.pace === 'yearly' && isYearEnd && yearPlan && !spPending) {
       // 学年结束：结算卡
       settleCard.hidden = false;
-      $('#incomeCard').hidden = true;
+      setIncomeVisible(false);
       grid.innerHTML = '';
       $('#decideTitle').textContent = '';
       $('#monthLogWrap').hidden = true;
       renderYearSettle(y);
     } else if (state.pace === 'yearly') {
       // 学年模式普通月份：按方案自动安排
-      $('#incomeCard').hidden = false;
+      setIncomeVisible(true);
       $('#decideTitle').textContent = spPending ? '这件事得你自己决定。' : '这个月按你的方案自动安排。';
       grid.innerHTML = '';
       if (decided && decided.plan) {
@@ -791,11 +805,11 @@
         });
       }
     } else if (free <= 0) {
-      $('#incomeCard').hidden = false;
+      setIncomeVisible(true);
       $('#decideTitle').textContent = '这个月没有闲钱可以分。';
       grid.innerHTML = '<p class="decide-empty">生活费刚好够用。很多人是这样过的。</p>';
     } else if (decided && decided.plan) {
-      $('#incomeCard').hidden = false;
+      setIncomeVisible(true);
       $('#decideTitle').textContent = '你已经安排了这个月。';
       grid.innerHTML = '';
       POCKETS.forEach(function (k) {
@@ -808,7 +822,7 @@
         grid.appendChild(div);
       });
     } else {
-      $('#incomeCard').hidden = false;
+      setIncomeVisible(true);
       $('#decideTitle').textContent = '这 ' + fmtMoney(free) + ' 闲钱，你想怎么放？';
       grid.innerHTML = '';
       DECISIONS.forEach(function (d) {
@@ -854,7 +868,25 @@
     }
     $('#resetMonthBtn').hidden = !(decided && (decided.plan || decided.specialChoice));
     $('#playBtn').textContent = '▶ 快进（自动按「存起来」走完）';
+
+    // 自动推进状态与翻页动画
+    var pauseBtn = $('#pauseBtn');
+    if (pauseBtn) {
+      pauseBtn.hidden = false;
+      pauseBtn.classList.toggle('is-on', state.autoPaused);
+      pauseBtn.textContent = state.autoPaused ? '▶' : '⏸';
+      pauseBtn.title = state.autoPaused ? '恢复自动推进' : '暂停自动推进';
+    }
+    var card = $('#monthCard');
+    if (card && lastRenderedMonth !== month) {
+      lastRenderedMonth = month;
+      card.classList.remove('flip-in');
+      void card.offsetWidth;          // 重启动画
+      card.classList.add('flip-in');
+    }
   }
+
+  var lastRenderedMonth = -1;
 
   /** 学年结算卡：这一年你换了什么。 */
   function renderYearSettle(y) {
@@ -902,6 +934,7 @@
         : (m >= 9 && m <= 11) ? 'autumn' : 'winter';
     if (document.body.getAttribute('data-season') !== season) {
       document.body.setAttribute('data-season', season);
+      buildSeasonParticles();
     }
   }
 
@@ -1012,6 +1045,119 @@
     return { auto: auto, manual: manual };
   }
 
+  /* ---------- 自动推进 / 进度 / 氛围 ---------- */
+
+  var autoTimer = 0;
+
+  /**
+   * 决定做完后自动往下走：逐月模式推进一个月，学年模式继续跑这一年。
+   * 如果这个月还有没决定的事（闲钱没分配 / 大日子没回应），就原地等。
+   */
+  function maybeAdvance() {
+    if (state.timelineMode !== 'near' || state.autoPaused) return;
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(function () {
+      if (state.timelineMode !== 'near' || state.autoPaused) return;
+      var m = state.slider;
+      var sp = specialFor(m);
+      var d = state.near.decisions[m];
+      // 大日子还没回应：等
+      if (isMajorSpecial(sp) && !(d && d.specialChoice)) return;
+
+      if (state.pace === 'yearly') {
+        var y = yearIndex(m);
+        if (!state.near.plans[y]) return;   // 还没定方案：等
+        if ((m % 12) === 11) return;        // 学年末：停下看结算
+        autoRunYear();
+        return;
+      }
+      // 逐月：闲钱还没分配就等
+      if (!monthDecided(m) && monthFreeMoney(m) > 0) return;
+      if (m >= NEAR_MONTHS - 1) return;
+      nextMonth();
+    }, 620);
+  }
+
+  /** 取消待执行的自动推进（玩家手动操作时调用）。 */
+  function cancelAdvance() {
+    clearTimeout(autoTimer);
+    autoTimer = 0;
+  }
+
+  /** 学年 12 格进度条。 */
+  function renderYearStrip() {
+    var strip = $('#yearStrip');
+    if (!strip) return;
+    var y = yearIndex(state.slider);
+    strip.innerHTML = '';
+    for (var i = 0; i < 12; i++) {
+      var m = y * 12 + i;
+      var cell = document.createElement('div');
+      cell.className = 'year-cell';
+      var mp = monthParts(m);
+      if (mp.month === 2 || mp.month === 7 || mp.month === 8) cell.classList.add('is-break');
+      if (m < state.slider) cell.classList.add('is-done');
+      if (m === state.slider) cell.classList.add('is-now');
+      cell.title = '第 ' + mp.year + ' 年 ' + mp.month + ' 月';
+      strip.appendChild(cell);
+    }
+  }
+
+  /** 每个月一句生活化的旁白，让月份之间有差别。 */
+  var FLAVOR = {
+    1: ['寒假在家，被亲戚问了一整周“以后想做什么”。', '南京的冬天湿冷，被窝以外都是远方。'],
+    2: ['春节，红包和问题一起到。', '过完年，体重和账单都涨了一点。'],
+    3: ['开学第一周，课表比上学期满。', '图书馆的座位又开始难抢。'],
+    4: ['樱花开了，鸡鸣寺那条路人挤人。', '春天短得像没来过。'],
+    5: ['五一前，全班都在计划去哪。', '天气好得让人不想上课。'],
+    6: ['期末周，打印店排队到楼梯口。', '宿舍的灯亮到凌晨三点。'],
+    7: ['暑假第一天，你在家睡到中午。', '南京热得像蒸笼，能不出门就不出。'],
+    8: ['空调房和实习通勤，构成了这个夏天。', '朋友圈里全是旅行照。'],
+    9: ['九月，梧桐还没黄，课已经满了。', '新学期的第一件事是抢洗衣房。'],
+    10: ['南京的秋天只有两周，银杏和梧桐一起黄。', '早晚要穿外套了。'],
+    11: ['双十一的购物车，加了又删。', '天冷得很快，外卖订单变多了。'],
+    12: ['年末了，自习室开始通宵。', '跨年的朋友圈，一年比一年长。']
+  };
+
+  function renderFlavor(monthIndex) {
+    var el = $('#flavorLine');
+    if (!el) return;
+    var mp = monthParts(monthIndex);
+    var list = FLAVOR[mp.month] || [];
+    if (!list.length) { el.textContent = ''; return; }
+    var pick = list[(yearIndex(monthIndex) + mp.month) % list.length];
+    el.textContent = pick;
+  }
+
+  /** 季节飘落物：春樱 / 夏光 / 秋叶 / 冬雪。 */
+  function buildSeasonParticles() {
+    var layer = $('#seasonLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+    for (var i = 0; i < 14; i++) {
+      var el = document.createElement('i');
+      var size = 3 + Math.random() * 6;
+      el.style.setProperty('--x', Math.round(Math.random() * 100) + '%');
+      el.style.setProperty('--s', size.toFixed(1) + 'px');
+      el.style.setProperty('--d', (10 + Math.random() * 10).toFixed(1) + 's');
+      el.style.setProperty('--delay', (-Math.random() * 14).toFixed(1) + 's');
+      layer.appendChild(el);
+    }
+  }
+
+  /** 统一控制收入摘要的显隐（摘要与明细一起）。 */
+  function setIncomeVisible(visible) {
+    var summary = $('#incomeSummary');
+    if (summary) summary.hidden = !visible;
+    if (!visible) {
+      var detail = $('#incomeDetail');
+      if (detail) detail.hidden = true;
+      if (summary) summary.classList.remove('is-open');
+    }
+  }
+
   function renderPockets() {
     var segs = { money: $('#pocketMoney'), skill: $('#pocketSkill'), memory: $('#pocketMemory'), relation: $('#pocketRelation'), freedom: $('#pocketFreedom') };
     var maxPocket = Math.max(nearPocketTotal(), 1);
@@ -1084,6 +1230,7 @@
     state.near.decisions[month] = { plan: plan };
     runNearTo(month);
     renderNear();
+    maybeAdvance();
   }
 
   /** 特殊日子的花 / 不花。 */
@@ -1094,6 +1241,7 @@
     state.near.decisions[month] = d;
     runNearTo(month);
     renderNear();
+    maybeAdvance();
   }
 
   /** 暑假：选一个目的地（真实价格，南京出发）。 */
@@ -1111,6 +1259,7 @@
     state.near.decisions[month] = d;
     runNearTo(month);
     renderNear();
+    maybeAdvance();
   }
 
   /** 下一个月。 */
@@ -1659,7 +1808,27 @@
     $('#amount').addEventListener('input', function () { readInputs(false); });
     $('#amount').addEventListener('blur', function () { readInputs(true); });
 
+    // 暂停 / 账本抽屉 / 收入明细
+    $('#pauseBtn').addEventListener('click', function () {
+      state.autoPaused = !state.autoPaused;
+      if (state.autoPaused) cancelAdvance(); else maybeAdvance();
+      renderNear();
+    });
+
+    $('#ledgerToggle').addEventListener('click', function () {
+      var drawer = $('#ledgerDrawer');
+      drawer.hidden = !drawer.hidden;
+      this.classList.toggle('is-on', drawer.hidden === false);
+    });
+
+    $('#incomeSummary').addEventListener('click', function () {
+      var detail = $('#incomeDetail');
+      detail.hidden = !detail.hidden;
+      this.classList.toggle('is-open', detail.hidden === false);
+    });
+
     $('#nextMonthBtn').addEventListener('click', function () {
+      cancelAdvance();
       if (state.timelineMode === 'far') { go('reveal'); return; }
 
       if (state.pace === 'yearly') {

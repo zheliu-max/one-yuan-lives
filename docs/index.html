@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body data-season="autumn">
+<div class="season-layer" id="seasonLayer" aria-hidden="true"></div>
 <noscript>
   <div class="noscript">这部作品需要 JavaScript 才能播放。请在浏览器设置里允许它。</div>
 </noscript>
@@ -158,113 +159,133 @@
 
   <!-- 第四幕 · 时间机器（双模式） -->
   <section class="screen" data-screen="machine">
-    <p class="kicker" id="machineKicker">第四幕 · 时间机器</p>
-
-    <div class="mode-seg" role="group" aria-label="时间模式">
-      <button class="mode-item is-on" data-mode="near">近期 · 七年账本</button>
-      <button class="mode-item" data-mode="far">长期 · 三十年</button>
+    <div class="machine-top">
+      <div class="mode-seg" role="group" aria-label="时间模式">
+        <button class="mode-item is-on" data-mode="near">近期 · 七年账本</button>
+        <button class="mode-item" data-mode="far">长期 · 三十年</button>
+      </div>
+      <button class="icon-btn" id="ledgerToggle" aria-label="查看账本" title="查看账本">⚙</button>
     </div>
 
     <div id="nearStage">
-      <div class="pace-seg" id="paceSeg" role="group" aria-label="节奏">
-        <button class="pace-item is-on" data-pace="monthly">逐月 · 每月都决定</button>
-        <button class="pace-item" data-pace="yearly">学年 · 定方案自动跑</button>
-      </div>
-
-      <div class="month-head">
+      <div class="month-bar">
         <span class="month-badge" id="monthBadge">第 1 年 · 9 月</span>
-        <span class="month-left" id="monthLeft">还剩 83 次决定</span>
-      </div>
-
-      <div class="plan-card" id="planCard" hidden>
-        <p class="plan-title" id="planTitle">这一年，你的钱怎么分？</p>
-        <p class="plan-sub" id="planSub">定一个方案，之后每个月自动按它走。特殊日子会叫你。</p>
-        <div class="plan-list" id="planList"></div>
-      </div>
-
-      <div class="year-settle" id="yearSettle" hidden>
-        <p class="settle-title" id="settleTitle">大一结束了</p>
-        <div class="settle-body" id="settleBody"></div>
-      </div>
-
-      <div class="income-card" id="incomeCard">
-        <div class="income-row">
-          <span>到账</span><b id="incAllow">—</b>
-        </div>
-        <div class="income-row" id="incExtraRow" hidden>
-          <span id="incExtraLabel">额外收入</span><b id="incExtra">—</b>
-        </div>
-        <div class="income-row muted">
-          <span>固定支出</span><b id="incBase">—</b>
-        </div>
-        <div class="income-row total">
-          <span>这个月能决定的闲钱</span><b id="incFree">—</b>
+        <div class="month-bar-right">
+          <span class="month-left" id="monthLeft"></span>
+          <button class="icon-btn pause-btn" id="pauseBtn" hidden aria-label="暂停自动推进" title="暂停">⏸</button>
         </div>
       </div>
 
-      <div class="special" id="specialCard" hidden>
-        <div class="special-scene" id="specialScene" aria-hidden="true"></div>
-        <span class="special-tag" id="specialTag">特殊日子</span>
-        <p class="special-text" id="specialText"></p>
-        <div class="special-body" id="specialBody"></div>
+      <div class="year-strip" id="yearStrip" aria-hidden="true"></div>
+
+      <div class="month-card" id="monthCard">
+        <button class="income-summary" id="incomeSummary">
+          <span id="incomeSummaryText">这个月能决定 360 元</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="income-detail" id="incomeDetail" hidden>
+          <div class="income-row">
+            <span>到账</span><b id="incAllow">—</b>
+          </div>
+          <div class="income-row" id="incExtraRow" hidden>
+            <span id="incExtraLabel">额外收入</span><b id="incExtra">—</b>
+          </div>
+          <div class="income-row muted">
+            <span>固定支出</span><b id="incBase">—</b>
+          </div>
+          <div class="income-row total">
+            <span>这个月能决定的闲钱</span><b id="incFree">—</b>
+          </div>
+        </div>
+
+        <div class="special" id="specialCard" hidden>
+          <div class="special-scene" id="specialScene" aria-hidden="true"></div>
+          <span class="special-tag" id="specialTag">特殊日子</span>
+          <p class="special-text" id="specialText"></p>
+          <div class="special-body" id="specialBody"></div>
+        </div>
+
+        <div class="plan-card" id="planCard" hidden>
+          <p class="plan-title" id="planTitle">这一年，你的钱怎么分？</p>
+          <p class="plan-sub" id="planSub">定一个方案，之后每个月自动按它走。大日子会叫你。</p>
+          <div class="plan-list" id="planList"></div>
+        </div>
+
+        <div class="year-settle" id="yearSettle" hidden>
+          <p class="settle-title" id="settleTitle">大一结束了</p>
+          <div class="settle-body" id="settleBody"></div>
+        </div>
+
+        <p class="decide-title" id="decideTitle">这笔钱，你想怎么放？</p>
+        <div class="decide-grid" id="decideGrid"></div>
+
+        <p class="flavor-line" id="flavorLine"></p>
       </div>
 
-      <p class="decide-title" id="decideTitle">这笔钱，你想怎么放？</p>
-      <div class="decide-grid" id="decideGrid"></div>
+      <p class="narration" id="narration">来看看这一个月。</p>
 
-      <div class="month-log" id="monthLogWrap" hidden>
-        <div class="month-log-title">本月账本</div>
-        <div class="month-log-body" id="monthLog"></div>
-      </div>
+      <!-- 账本抽屉：默认收起，减少主屏干扰 -->
+      <div class="drawer" id="ledgerDrawer" hidden>
+        <div class="drawer-section">
+          <div class="drawer-title">五口袋</div>
+          <div class="pocket-bar" aria-hidden="true">
+            <div class="pocket-seg" id="pocketMoney"></div>
+            <div class="pocket-seg" id="pocketSkill"></div>
+            <div class="pocket-seg" id="pocketMemory"></div>
+            <div class="pocket-seg" id="pocketRelation"></div>
+            <div class="pocket-seg" id="pocketFreedom"></div>
+          </div>
+          <div class="pocket-list" id="pocketList"></div>
+        </div>
 
-      <div class="pocket-bar" aria-hidden="true">
-        <div class="pocket-seg" id="pocketMoney"></div>
-        <div class="pocket-seg" id="pocketSkill"></div>
-        <div class="pocket-seg" id="pocketMemory"></div>
-        <div class="pocket-seg" id="pocketRelation"></div>
-        <div class="pocket-seg" id="pocketFreedom"></div>
+        <div class="month-log" id="monthLogWrap" hidden>
+          <div class="month-log-title">本月账本</div>
+          <div class="month-log-body" id="monthLog"></div>
+        </div>
+
+        <div class="timeline" id="timelineWrap">
+          <input id="timeSlider" type="range" min="0" max="84" step="1" value="0" aria-label="拖动时间">
+          <div class="timeline-scale" aria-hidden="true">
+            <span>现在</span><span id="tlMid">3 年半</span><span id="tlEnd">7 年</span>
+          </div>
+          <div class="timeline-actions">
+            <button class="btn btn-ghost btn-play" id="playBtn">▶ 一路看完</button>
+            <button class="btn btn-ghost btn-roll" id="rollBtn" hidden>🎲 重掷意外</button>
+            <button class="btn btn-ghost" id="resetMonthBtn" hidden>↺ 重来这一个月</button>
+          </div>
+        </div>
+
+        <div class="controls" id="controls">
+          <div class="seg" id="rateSeg" role="group" aria-label="年化收益率">
+            <button class="seg-item" data-rate="0.03">3%</button>
+            <button class="seg-item" data-rate="0.05">5%</button>
+            <button class="seg-item is-on" data-rate="0.08">8%</button>
+          </div>
+          <label class="switch" id="inflationRow">
+            <input type="checkbox" id="inflationToggle">
+            <span>扣除 3% 通胀（今天的购买力）</span>
+          </label>
+          <p class="disclaimer" id="disclaimer"></p>
+        </div>
+
+        <div class="pace-seg" id="paceSeg" role="group" aria-label="节奏">
+          <button class="pace-item is-on" data-pace="monthly">逐月 · 每月都决定</button>
+          <button class="pace-item" data-pace="yearly">学年 · 定方案自动跑</button>
+        </div>
       </div>
-      <div class="pocket-list" id="pocketList"></div>
     </div>
 
     <div id="farStage" hidden>
       <canvas id="curveCanvas" aria-label="三十年三线对照"></canvas>
     </div>
 
-    <div class="readout" id="readoutBox">
+    <div class="readout" id="readoutBox" hidden>
       <div class="readout-label" id="readoutLabel">现在</div>
       <div class="readout-value"><span id="valueNum">0</span><span class="readout-unit" id="valueUnit">元</span></div>
       <div class="readout-ghost" id="ghostLine"></div>
     </div>
 
-    <p class="narration" id="narration">来看看这一个月。</p>
-
-    <div class="timeline" id="timelineWrap">
-      <input id="timeSlider" type="range" min="0" max="84" step="1" value="0" aria-label="拖动时间">
-      <div class="timeline-scale" aria-hidden="true">
-        <span>现在</span><span id="tlMid">3 年半</span><span id="tlEnd">7 年</span>
-      </div>
-      <div class="timeline-actions">
-        <button class="btn btn-ghost btn-play" id="playBtn">▶ 一路看完</button>
-        <button class="btn btn-ghost btn-roll" id="rollBtn" hidden>🎲 重掷意外</button>
-        <button class="btn btn-ghost" id="resetMonthBtn" hidden>↺ 重来这一个月</button>
-      </div>
-    </div>
-
-    <div class="controls" id="controls">
-      <div class="seg" id="rateSeg" role="group" aria-label="年化收益率">
-        <button class="seg-item" data-rate="0.03">3%</button>
-        <button class="seg-item" data-rate="0.05">5%</button>
-        <button class="seg-item is-on" data-rate="0.08">8%</button>
-      </div>
-      <label class="switch" id="inflationRow">
-        <input type="checkbox" id="inflationToggle">
-        <span>扣除 3% 通胀（今天的购买力）</span>
-      </label>
-      <p class="disclaimer" id="disclaimer"></p>
-    </div>
-
-    <button class="btn" id="nextMonthBtn">下一个月 →</button>
+    <button class="btn next-btn" id="nextMonthBtn">下一个月 →</button>
   </section>
 
   <!-- 第五幕 · 反转 -->
