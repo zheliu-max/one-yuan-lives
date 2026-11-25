@@ -17,17 +17,22 @@
 
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--paper);
+}
 
 body {
   margin: 0;
   color: var(--ink);
-  background-color: var(--paper);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   line-height: 1.62;
-  background:
+  background-color: var(--paper);
+  background-image:
     radial-gradient(120% 80% at 50% -12%, #1a1612 0%, #100e0c 50%, #080706 100%);
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  min-height: 100%;
 }
 
 #app {
@@ -153,7 +158,7 @@ body::after {
   border-radius: 999px;
   font-size: 12px;
   color: var(--ink-soft);
-  background: rgba(255, 250, 241, .6);
+  background: rgba(236, 227, 212, .05);
 }
 
 /* 通用文字 */
@@ -213,7 +218,7 @@ body::after {
   box-shadow: none;
   font-weight: 500;
 }
-.btn-ghost:hover { background: rgba(255, 250, 241, .7); }
+.btn-ghost:hover { background: rgba(236, 227, 212, .06); }
 .btn:focus-visible,
 .card:focus-visible,
 .seg-item:focus-visible,
@@ -301,7 +306,7 @@ input:focus-visible {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 250, 241, .7);
+  background: rgba(236, 227, 212, .06);
 }
 .mode-item {
   flex: 1;
@@ -433,7 +438,7 @@ input:focus-visible {
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 13px;
-  background: rgba(255,250,241,.7);
+  background: rgba(236, 227, 212, .06);
   margin-bottom: 12px;
 }
 .month-log-title { font-size: 11.5px; letter-spacing: .14em; color: var(--warm); margin-bottom: 8px; }
@@ -458,16 +463,20 @@ body {
   transition: background .8s ease;
 }
 body[data-season="spring"] {
-  background: radial-gradient(120% 78% at 50% -10%, #12100d 0%, #100e0c 45%, #0e1210 100%);
+  background-color: var(--paper);
+  background-image: radial-gradient(120% 78% at 50% -10%, #12100d 0%, #100e0c 45%, #0e1210 100%);
 }
 body[data-season="summer"] {
-  background: radial-gradient(120% 78% at 50% -10%, #13110c 0%, #12100b 45%, #100e09 100%);
+  background-color: var(--paper);
+  background-image: radial-gradient(120% 78% at 50% -10%, #13110c 0%, #12100b 45%, #100e09 100%);
 }
 body[data-season="autumn"] {
-  background: radial-gradient(120% 78% at 50% -10%, #1e1a15 0%, #12100c 45%, #100d0a 100%);
+  background-color: var(--paper);
+  background-image: radial-gradient(120% 78% at 50% -10%, #1e1a15 0%, #12100c 45%, #100d0a 100%);
 }
 body[data-season="winter"] {
-  background: radial-gradient(120% 78% at 50% -10%, #0d1113 0%, #0f1315 45%, #0b0e10 100%);
+  background-color: var(--paper);
+  background-image: radial-gradient(120% 78% at 50% -10%, #0d1113 0%, #0f1315 45%, #0b0e10 100%);
 }
 
 /* 每个日子的插画 */
@@ -532,7 +541,7 @@ body[data-season="winter"] {
   margin-bottom: 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 250, 241, .7);
+  background: rgba(236, 227, 212, .06);
 }
 .pace-item {
   flex: 1;
@@ -609,7 +618,7 @@ body[data-season="winter"] {
   height: 38px;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: rgba(255, 250, 241, .8);
+  background: rgba(236, 227, 212, .07);
   color: var(--ink-soft);
   font-size: 16px;
   line-height: 1;
@@ -701,7 +710,7 @@ body[data-season="winter"] {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 250, 241, .75);
+  background: rgba(236, 227, 212, .06);
   margin-top: 4px;
   display: flex;
   flex-direction: column;
@@ -947,7 +956,7 @@ body[data-season="winter"] .season-layer i { background: #54636b; border-radius:
   vertical-align: 1px;
 }
 .opt-kind.save { background: #152421; color: #7fa89a; }
-.opt-kind.invest { background: #1a1f2c; color: #3f5f8f; }
+.opt-kind.invest { background: #1a1f2c; color: #8fb0e0; }
 .opt-kind.relate { background: #261e14; color: #d1a06a; }
 
 /* 意外概率说明（封面） */
@@ -956,7 +965,7 @@ body[data-season="winter"] .season-layer i { background: #54636b; border-radius:
   padding: 13px 14px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 253, 248, .82);
+  background: rgba(236, 227, 212, .05);
   text-align: left;
 }
 .rules-title {
@@ -1100,7 +1109,7 @@ body[data-season="winter"] .season-layer i { background: #54636b; border-radius:
 .recap-item.accident { color: #d97a68; font-weight: 600; }
 .recap-item.accident .r-amt { color: #d97a68; }
 .recap-item.skip { color: #857868; }
-.recap-item.romance { color: #b5476f; font-weight: 600; }
+.recap-item.romance { color: #e08aa8; font-weight: 600; }
 .recap-item.spend .r-amt { color: var(--warm); }
 @keyframes recapIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -1235,7 +1244,7 @@ body[data-season="winter"] .season-layer i { background: #54636b; border-radius:
   height: 42px;
   border-radius: 12px;
   background: #241d16;
-  color: #8a5230;
+  color: #d1a06a;
 }
 .card-icon svg { width: 26px; height: 26px; }
 .card-body { display: flex; flex-direction: column; gap: 2px; }
@@ -1415,7 +1424,7 @@ input[type="range"]::-moz-range-thumb {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 250, 241, .7);
+  background: rgba(236, 227, 212, .06);
 }
 .seg-item {
   flex: 1;
@@ -1520,7 +1529,7 @@ input[type="range"]::-moz-range-thumb {
   #app {
     min-height: calc(100svh - 56px);
     border-radius: 26px;
-    background: rgba(255, 252, 246, .55);
+    background: rgba(236, 227, 212, .05);
     box-shadow: 0 30px 70px rgba(80, 56, 30, .16);
     overflow: hidden;
   }
