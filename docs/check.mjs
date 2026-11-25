@@ -119,6 +119,14 @@ check('意外有拒绝/硬扛选项', js.includes("'borrow'") && js.includes("'e
 check('意外花费计入当月闲钱', js.includes('accidentCostFor'))
 check('意外单次概率按年化反推', js.includes('0.035') && js.includes('0.015') && js.includes('0.007'))
 
+// v3.6：意外余波
+check('有意外余波系统', js.includes('function followupFor'))
+check('三种余波（手机/身体/挂科）', js.includes("'fu-phone'") && js.includes("'fu-weak'") && js.includes("'fu-delay'"))
+check('余波按延迟月份触发', js.includes('accidentChoiceAt(') && js.includes('monthIndex - 6') && js.includes('monthIndex - 8'))
+check('硬扛生病后更容易再病', js.includes('before.weak') && js.includes('rate *= 2'))
+check('进入月份前的状态快照', js.includes('flagsAtMonth'))
+check('余波插画齐全', js.includes("'fu-phone':") && js.includes("'fu-weak':") && js.includes("'fu-delay':"))
+
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
 const fvSingle = (p, r, n) => p * Math.pow(1 + r, n)

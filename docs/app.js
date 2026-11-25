@@ -249,7 +249,13 @@
 
     'newyear': '<svg viewBox="0 0 200 120"><rect x="0" y="96" width="200" height="24" fill="#2b2320"/><rect x="16" y="70" width="16" height="26" fill="#3b3330"/><rect x="38" y="58" width="20" height="38" fill="#3b3330"/><rect x="64" y="74" width="14" height="22" fill="#3b3330"/><rect x="84" y="50" width="22" height="46" fill="#3b3330"/><rect x="112" y="66" width="18" height="30" fill="#3b3330"/><rect x="136" y="56" width="16" height="40" fill="#3b3330"/><rect x="158" y="72" width="18" height="24" fill="#3b3330"/><g stroke-linecap="round"><path d="M60 18v-8M60 26v8M48 22h-8M72 22h8M52 14l-5-5M68 14l5-5" stroke="#f2c96b" stroke-width="2"/><path d="M136 30v-7M136 38v7M126 34h-7M146 34h7" stroke="#d98a6a" stroke-width="2"/></g><circle cx="60" cy="22" r="3" fill="#fdf6ea"/><circle cx="136" cy="34" r="2.5" fill="#fdf6ea"/></svg>',
 
-    'kaoyan': '<svg viewBox="0 0 200 120"><rect x="46" y="76" width="76" height="14" rx="2" fill="#8a6a4a"/><rect x="52" y="62" width="64" height="14" rx="2" fill="#3f6f66"/><rect x="48" y="48" width="72" height="14" rx="2" fill="#d98a6a"/><path d="M150 24v52" stroke="#4a4038" stroke-width="3" stroke-linecap="round"/><path d="M150 24l18-6v14l-18 6z" fill="#d79a3f"/><ellipse cx="150" cy="82" rx="15" ry="5" fill="#f2c96b" opacity=".5"/><rect x="28" y="30" width="34" height="34" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M34 40h22M34 48h22M34 56h14" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/></svg>'
+    'kaoyan': '<svg viewBox="0 0 200 120"><rect x="46" y="76" width="76" height="14" rx="2" fill="#8a6a4a"/><rect x="52" y="62" width="64" height="14" rx="2" fill="#3f6f66"/><rect x="48" y="48" width="72" height="14" rx="2" fill="#d98a6a"/><path d="M150 24v52" stroke="#4a4038" stroke-width="3" stroke-linecap="round"/><path d="M150 24l18-6v14l-18 6z" fill="#d79a3f"/><ellipse cx="150" cy="82" rx="15" ry="5" fill="#f2c96b" opacity=".5"/><rect x="28" y="30" width="34" height="34" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M34 40h22M34 48h22M34 56h14" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/></svg>',
+
+    'fu-phone': '<svg viewBox="0 0 200 120"><rect x="74" y="18" width="52" height="84" rx="8" fill="#2b2320"/><rect x="80" y="26" width="40" height="64" rx="3" fill="#7fa8a0"/><circle cx="100" cy="96" r="3" fill="#f2c96b"/><path d="M132 70c14 0 22 8 22 18" stroke="#d0a97e" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M30 60c8-6 18-6 26 0" stroke="#c9b79b" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>',
+
+    'fu-weak': '<svg viewBox="0 0 200 120"><rect x="88" y="22" width="10" height="54" rx="5" fill="#dfe7ea" stroke="#9fb4bc" stroke-width="2"/><rect x="90" y="48" width="6" height="30" rx="3" fill="#d98a6a"/><circle cx="93" cy="84" r="12" fill="#d98a6a"/><circle cx="93" cy="84" r="6" fill="#fdf6ea"/><path d="M118 40h44M118 54h34M118 68h40" stroke="#c9b79b" stroke-width="3" stroke-linecap="round"/><path d="M38 92c6-10 14-10 20 0" stroke="#9fb8a4" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+
+    'fu-delay': '<svg viewBox="0 0 200 120"><rect x="46" y="16" width="92" height="88" rx="4" fill="#fdfaf3" stroke="#cbb497" stroke-width="2"/><path d="M60 36h64M60 50h64M60 64h40" stroke="#cbb497" stroke-width="2.5" stroke-linecap="round"/><circle cx="146" cy="86" r="18" fill="#c0452f" opacity=".18"/><circle cx="146" cy="86" r="18" fill="none" stroke="#c0452f" stroke-width="2.5"/><path d="M140 86l5 5 9-10" stroke="#c0452f" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'
   };
 
   /**
@@ -396,7 +402,11 @@
     n.gearSet = computeGearSet();
     // 每年意外结果需要稳定：用固定种子重放，保证回看不乱跳
     var rnd = mulberry32(20260901 + (state.birthday || 6));
+    n.flagsAtMonth = [];
     for (var m = 0; m <= monthIndex; m++) {
+      // 记录"进入这个月之前"的状态标记（意外触发率要用它，且不能被本月结果污染）
+      n.flagsAtMonth[m] = {};
+      for (var fk in n.flags) { if (n.flags[fk]) n.flagsAtMonth[m][fk] = true; }
       advanceNearMonth(m, rnd);
       var d = n.decisions[m];
       // 顺序很重要：先经历事件（花掉的钱从现金扣），再分配剩下的闲钱
@@ -1451,6 +1461,10 @@
       };
     }
 
+    // 余波优先：几个月前那次意外的账，现在回来找你
+    var fu = followupFor(m);
+    if (fu) return fu;
+
     // 朋友生日
     var friend = FRIENDS.filter(function (f) { return f.birthday === parts.month; })[0];
     if (friend) {
@@ -1541,6 +1555,61 @@
     return isAskingEvent(ev) && ev.major === true;
   }
 
+  /* ---------- 意外余波：几个月后才回来找你 ---------- */
+
+  /**
+   * 余波在固定的偏移月份触发，读的是当时那张意外卡的选择。
+   * 因为选择存在 decisions 里，回放时结果完全一致。
+   */
+  function accidentChoiceAt(monthIndex, optionKey) {
+    if (monthIndex < 0) return false;
+    var d = state.near.decisions[monthIndex];
+    return !!(d && d.accidentChoice === optionKey);
+  }
+
+  function followupFor(monthIndex) {
+    // 借室友手机 → 半年后他提起
+    if (accidentChoiceAt(monthIndex - 6, 'borrow')) {
+      return {
+        key: 'fu-phone', tag: '余波', date: '半年后', major: false, scene: 'fu-phone',
+        title: '室友提起了那部旧手机',
+        text: '他说：“那手机你要用就先用着。”语气很轻，但你知道意思。',
+        options: [
+          { key: 'meal', label: '请他吃顿饭', sub: '200 元 · 关系 +2', cost: 200, pocket: 'relation', rel: 2, memory: '请室友吃饭，还了手机人情' },
+          { key: 'newone', label: '买台新的还他', sub: '1,200 元 · 关系 +4', cost: 1200, pocket: 'relation', rel: 4, memory: '还了室友一台新手机' },
+          { key: 'ignore', label: '当没听懂', sub: '0 元 · 关系 −2', cost: 0, rel: -2, memory: '欠了室友的人情没还' }
+        ]
+      };
+    }
+    // 生病硬扛 → 三个月后身体报警
+    if (accidentChoiceAt(monthIndex - 3, 'endure')) {
+      return {
+        key: 'fu-weak', tag: '余波', date: '三个月后', major: false, scene: 'fu-weak',
+        title: '身体明显不如从前',
+        text: '这几个月你总觉得累，换季必感冒。校医院的人说：先别熬夜了。',
+        options: [
+          { key: 'gym', label: '办张健身卡', sub: '300 元 · 把身体扳回来', cost: 300, pocket: 'freedom', clearFlag: 'weak', memory: '办了健身卡，身体慢慢好了' },
+          { key: 'sleep', label: '开始早睡，不花钱', sub: '0 元 · 慢一点恢复', cost: 0, clearFlag: 'weak', memory: '开始早睡，身体缓过来了' },
+          { key: 'ignore', label: '年轻，扛得住', sub: '0 元 · 病根留着', cost: 0, flag: 'weak', memory: '身体一直没缓过来' }
+        ]
+      };
+    }
+    // 挂科硬扛 → 八个月后教务通知
+    if (accidentChoiceAt(monthIndex - 8, 'delay')) {
+      return {
+        key: 'fu-delay', tag: '余波', date: '八个月后', major: true, scene: 'fu-delay',
+        title: '教务通知：还有一门课没过',
+        text: '拖了大半年，这门课现在变成毕业前必须解决的事。',
+        options: [
+          { key: 'cram', label: '报个冲刺班', sub: '500 元 · 一把过', cost: 500, pocket: 'skill', clearFlag: 'delay', memory: '报班把那门课补过了' },
+          { key: 'beg', label: '找老师求情', sub: '0 元 · 关系 −2，五成能过', cost: 0, rel: -2, gamblePass: 0.5, memory: '找老师求情，过了' },
+          { key: 'giveup', label: '继续拖', sub: '0 元 · 延毕风险真的来了', cost: 0, flag: 'delay', memory: '重修一直拖到毕业' }
+        ]
+      };
+    }
+    return null;
+  }
+
   /* ---------- 意外：按场景触发 + 第二幕事件卡 ---------- */
 
   function accidentRng(m) {
@@ -1576,7 +1645,14 @@
     // 换季：没人安排，但身体会
     if (!scene && [11, 12, 1, 3].indexOf(mo) >= 0) scene = 'illness';
     if (!scene) return null;
-    if (accidentRng(monthIndex)() >= ACCIDENT_RATE[scene]) return null;
+    // 余波月不再叠加新意外
+    if (ev && ev.key.indexOf('fu-') === 0) return null;
+
+    var rate = ACCIDENT_RATE[scene];
+    // 硬扛过生病的人，之后更容易再病
+    var before = (state.near.flagsAtMonth && state.near.flagsAtMonth[monthIndex]) || {};
+    if (scene === 'illness' && before.weak) rate *= 2;
+    if (accidentRng(monthIndex)() >= rate) return null;
     return ACCIDENTS[scene];
   }
 
@@ -1700,8 +1776,16 @@
     // 通用
     var cost2 = opt.cost || 0;
     if (cost2 > 0) spendCash(cost2);
-    if (ev.friend && opt.rel) addRelation(ev.friend.name, opt.rel);
-    if (opt.memory && cost2 > 0) n.memories.push({ text: opt.memory, y: y, m: mo });
+    if (opt.rel) addRelation(ev.friend ? ev.friend.name : '朋友', opt.rel);
+    // 求情类的赌一把：过了就清掉延期标记
+    if (typeof opt.gamblePass === 'number') {
+      if (accidentRng(monthIndex + 900)() <= opt.gamblePass) n.flags[opt.clearFlag || 'delay'] = false;
+    }
+    if (opt.flag) n.flags[opt.flag] = true;
+    if (opt.clearFlag) n.flags[opt.clearFlag] = false;
+    if (opt.memory && (cost2 > 0 || opt.flag || opt.clearFlag)) {
+      n.memories.push({ text: opt.memory, y: y, m: mo });
+    }
     n.events.push({
       t: opt.key === 'skip' ? ev.title : (opt.memory || ev.title),
       y: y, m: mo, amt: -cost2, note: opt.key === 'skip' ? '你放弃了' : (ev.tag || ''),
