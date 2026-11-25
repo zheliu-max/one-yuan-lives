@@ -52,6 +52,22 @@
       <span>五类去向 · 互相转化</span>
     </div>
 
+    <div class="rules-card">
+      <p class="rules-title">这一路会有意外</p>
+      <p class="rules-text">
+        有些事不由你安排，而是发生在具体场景里——演唱会散场、旅行途中、期末、换季。
+        真发生时会出现一张「第二幕 · 意外」卡，每个选项都能拒绝，代价自己扛。
+        <b>概率按真实数据校准：</b>
+      </p>
+      <div class="prob-chart">
+        <div class="prob-row"><span>挂科重修</span><i><b style="width:100%"></b></i><em>39%</em></div>
+        <div class="prob-row"><span>电信诈骗</span><i><b style="width:86%"></b></i><em>34%</em></div>
+        <div class="prob-row"><span>手机被偷</span><i><b style="width:77%"></b></i><em>30%</em></div>
+        <div class="prob-row"><span>生病住院</span><i><b style="width:33%"></b></i><em>13%</em></div>
+      </div>
+      <p class="prob-note">七年内至少遇到一次的概率（年化 6.9% / 5.8% / 5.0% / 2.0%，数据来源见 README）· 合计约 76%</p>
+    </div>
+
     <button class="btn" data-go="identity">走进这三十年</button>
     <p class="fineprint">全程约 4 分钟 · 不用登录 · 可以随时重来</p>
   </section>
@@ -222,6 +238,19 @@
           <span class="special-tag" id="specialTag">特殊日子</span>
           <p class="special-text" id="specialText"></p>
           <div class="special-body" id="specialBody"></div>
+        </div>
+
+        <div class="accident" id="accidentCard" hidden>
+          <div class="accident-head">
+            <span class="accident-emoji" id="accidentEmoji" aria-hidden="true">⚠️</span>
+            <div>
+              <span class="accident-tag">第二幕 · 意外</span>
+              <p class="accident-title" id="accidentTitle"></p>
+            </div>
+          </div>
+          <p class="accident-text" id="accidentText"></p>
+          <p class="accident-prob" id="accidentProb"></p>
+          <div class="accident-body" id="accidentBody"></div>
         </div>
 
         <div class="plan-card" id="planCard" hidden>

@@ -44,6 +44,7 @@
       plans: {},             // 学年索引 -> 方案 split
       eventCache: {},        // 月份索引 -> 生成的事件（确定性）
       relations: {},         // 朋友名字 -> 关系值
+      flags: {},             // 意外留下的状态标记
       memories: [],          // 值得回看的记忆
       romance: null,         // 恋爱状态
       gearSet: {},           // 月份索引 -> 该月是否降档
@@ -173,7 +174,7 @@
     { name: '小林', role: '室友', birthday: 3, base: 2 },
     { name: '阿哲', role: '室友', birthday: 10, base: 2 },
     { name: '张姐', role: '社团', birthday: 12, base: 1 },
-    { name: '老周', role: '高中同学', birthday: 6, base: 1 }
+    { name: '老周', role: '高中同学', birthday: 2, base: 1 }
   ];
 
   // 旅行目的地池（南京出发，真实价格）
@@ -251,13 +252,56 @@
     'kaoyan': '<svg viewBox="0 0 200 120"><rect x="46" y="76" width="76" height="14" rx="2" fill="#8a6a4a"/><rect x="52" y="62" width="64" height="14" rx="2" fill="#3f6f66"/><rect x="48" y="48" width="72" height="14" rx="2" fill="#d98a6a"/><path d="M150 24v52" stroke="#4a4038" stroke-width="3" stroke-linecap="round"/><path d="M150 24l18-6v14l-18 6z" fill="#d79a3f"/><ellipse cx="150" cy="82" rx="15" ry="5" fill="#f2c96b" opacity=".5"/><rect x="28" y="30" width="34" height="34" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M34 40h22M34 48h22M34 56h14" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/></svg>'
   };
 
-  // 意外事件（真实概率）—— 每年一次机会
-  var ACCIDENTS = [
-    { name: '手机被偷', chance: 0.06, cost: 2500, pocket: 'freedom', note: '重新买一台' },
-    { name: '生病住院', chance: 0.04, cost: 1200, pocket: 'freedom', note: '医保报销后自付' },
-    { name: '电信诈骗', chance: 0.05, cost: 1500, pocket: 'freedom', note: '刷单骗局' },
-    { name: '挂科重修', chance: 0.04, cost: 400, pocket: 'skill', note: '重修费 + 时间' }
-  ];
+  /**
+   * 意外事件：不再"每年掷一次抽哪个"，而是挂在具体场景上，
+   * 每到该发生的时间点，按真实概率各自判定一次。
+   *
+   * 单次概率由年化概率反推：p = 1 - (1 - 年化)^(1/机会点)
+   *   挂科重修 6.9%/年 · 2 次期末   → 3.5%/次
+   *   电信诈骗 5.8%/年 · 4 次开学季 → 1.5%/次
+   *   手机被偷 5.0%/年 · 5 次出门   → 1.0%/次
+   *   生病住院 2.0%/年 · 3 次换季   → 0.7%/次
+   */
+  var ACCIDENT_RATE = { fail: 0.035, fraud: 0.015, phone: 0.010, illness: 0.007 };
+
+  var ACCIDENTS = {
+    phone: {
+      key: 'phone', name: '手机被偷', emoji: '📱', scene: 'phone',
+      text: '散场的人潮把你往外推。你再摸口袋，空了。',
+      options: [
+        { key: 'new', label: '买台新的', sub: '2,500 元 · 应急金见底', cost: 2500, pocket: 'freedom', memory: '手机被偷，换了新的' },
+        { key: 'used', label: '买台二手的', sub: '1,200 元 · 能用就行', cost: 1200, pocket: 'freedom', memory: '手机被偷，买了二手的' },
+        { key: 'borrow', label: '借室友旧手机顶着', sub: '0 元 · 关系 −1.5', cost: 0, rel: -1.5, memory: '手机被偷，借手机撑了半年' }
+      ]
+    },
+    fraud: {
+      key: 'fraud', name: '电信诈骗', emoji: '⚠️', scene: 'fraud',
+      text: '“同学，刷单返利，一天三百。”你垫了 300，对方说再补 1,200 就能连本带利提现。',
+      options: [
+        { key: 'report', label: '立刻报警、冻结账户', sub: '损失 300 元 · 止住', cost: 300, pocket: 'freedom', memory: '被刷单诈骗 300' },
+        { key: 'chase', label: '再投 1,200 想回本', sub: '三成能回本，七成血本无归', cost: 1200, pocket: 'freedom', gamble: 0.3, memory: '被刷单诈骗，越陷越深' },
+        { key: 'stop', label: '认栽，当交学费', sub: '损失 300 元 · 不再纠缠', cost: 300, pocket: 'freedom', memory: '被刷单诈骗 300，及时止损' }
+      ]
+    },
+    fail: {
+      key: 'fail', name: '挂科重修', emoji: '📉', scene: 'fail',
+      text: '成绩出来了。那门课挂了，补考也没过。教务系统里多了一行“重修”。',
+      options: [
+        { key: 'retake', label: '交钱重修', sub: '400 元 · 下学期重来', cost: 400, pocket: 'skill', memory: '挂了一门课，交钱重修' },
+        { key: 'self', label: '找同学补课，自己啃', sub: '200 元 · 欠个人情', cost: 200, pocket: 'skill', rel: -0.5, memory: '挂科，靠同学补课' },
+        { key: 'delay', label: '硬扛，明年再说', sub: '0 元 · 毕业延期风险', cost: 0, flag: 'delay', memory: '挂科没修，一直拖着' }
+      ]
+    },
+    illness: {
+      key: 'illness', name: '生病住院', emoji: '🏥', scene: 'illness',
+      text: '换季那阵子，你的扁桃体先投降了。校医院说最好住院观察两天。',
+      options: [
+        { key: 'hospital', label: '住院两天', sub: '1,200 元 · 医保报销后自付', cost: 1200, pocket: 'freedom', memory: '住院两天' },
+        { key: 'clinic', label: '门诊拿药硬顶', sub: '300 元 · 好得慢一点', cost: 300, pocket: 'freedom', memory: '生病，门诊拿药' },
+        { key: 'endure', label: '硬扛，多喝热水', sub: '0 元 · 落下病根', cost: 0, flag: 'weak', memory: '生病硬扛，身体差了' }
+      ]
+    }
+  };
 
   // 习惯衰减：设定"坚持 N 年"，超过后每月投入减半（人性税）
   function habitActive(monthIndex) {
@@ -295,25 +339,7 @@
       n.events.push({ t: gainSrc.title, y: gParts.year, m: gParts.month, amt: gainSrc.amount, note: gainSrc.text, special: gainSrc.key });
     }
 
-    // 意外：每年第一次掷骰（用固定种子，回看时结果稳定）
-    if ((monthIndex % 12) === 0) {
-      var acc = null;
-      var accTotal = 0;
-      ACCIDENTS.forEach(function (a) { accTotal += a.chance; });
-      var roll = (rnd ? rnd() : Math.random()) * accTotal;
-      var cursor = 0;
-      for (var i = 0; i < ACCIDENTS.length; i++) {
-        cursor += ACCIDENTS[i].chance;
-        if (roll <= cursor) { acc = ACCIDENTS[i]; break; }
-      }
-      if (acc) {
-        var amt = acc.cost;
-        if (n[acc.pocket] >= amt) { n[acc.pocket] -= amt; }
-        else { n.cash -= amt; }
-        var accParts = monthParts(monthIndex);
-        n.events.push({ t: acc.name, y: accParts.year, m: accParts.month, amt: -amt, note: acc.note, accident: true });
-      }
-    }
+    // 意外不再在推进时自动结算：改为按场景触发、由玩家在事件第二幕里回应
   }
 
   /** 取某个月的静态校历事件（不含动态生成的演唱会/旅行/生日）。 */
@@ -366,6 +392,7 @@
     n.memories = [];
     n.relations = {};
     n.romance = null;
+    n.flags = {};
     n.gearSet = computeGearSet();
     // 每年意外结果需要稳定：用固定种子重放，保证回看不乱跳
     var rnd = mulberry32(20260901 + (state.birthday || 6));
@@ -376,6 +403,11 @@
       if (d && d.eventChoice) {
         var ev = eventFor(m);
         if (ev) applyEventChoice(m, ev, d.eventChoice, { companion: d.companion, basePrice: d.basePrice });
+      }
+      // 第二幕：意外
+      if (d && d.accidentChoice) {
+        var acc = accidentFor(m);
+        if (acc) applyAccidentChoice(m, acc, d.accidentChoice);
       }
       if (d && d.plan) applyPlan(m, d.plan);
     }
@@ -446,13 +478,26 @@
     return true;
   }
 
-  /** 本月可自由分配的闲钱（先扣掉事件花掉的）。 */
+  /** 已选意外实际花掉的钱（含赌输了追加的 1,200）。 */
+  function accidentCostFor(monthIndex) {
+    var d = state.near.decisions[monthIndex];
+    if (!d || !d.accidentChoice) return 0;
+    var acc = accidentFor(monthIndex);
+    if (!acc) return 0;
+    var opt = (acc.options || []).filter(function (o) { return o.key === d.accidentChoice; })[0];
+    if (!opt) return 0;
+    var cost = opt.cost || 0;
+    if (typeof opt.gamble === 'number' && accidentRng(monthIndex + 500)() > opt.gamble) cost += 1200;
+    return cost;
+  }
+
+  /** 本月可自由分配的闲钱（先扣掉事件和意外的花费）。 */
   function monthFreeMoney(monthIndex) {
     var allowance = monthlyAllowance();
     var base = monthlyBase(monthIndex);
     var extra = monthGain(monthIndex);
     var habitCut = state.amount * 30;
-    var spent = eventCostFor(monthIndex, state.near.decisions[monthIndex]);
+    var spent = eventCostFor(monthIndex, state.near.decisions[monthIndex]) + accidentCostFor(monthIndex);
     return Math.max(0, allowance + extra - base - habitCut - spent);
   }
 
@@ -931,6 +976,30 @@
       $('#specialCard').hidden = true;
     }
 
+    // —— 第二幕：意外卡 ——
+    var accCard = $('#accidentCard');
+    var acc = accidentFor(month);
+    if (acc) {
+      accCard.hidden = false;
+      $('#accidentEmoji').textContent = acc.emoji;
+      $('#accidentTitle').textContent = acc.name;
+      $('#accidentText').textContent = acc.text;
+      $('#accidentProb').textContent = '这个场景下的触发概率 ' +
+        (ACCIDENT_RATE[acc.key] * 100).toFixed(1) + '%（按真实年化概率换算到这个场景）';
+      var accBody = $('#accidentBody');
+      if (decided && decided.accidentChoice) {
+        var aopt = (acc.options || []).filter(function (o) { return o.key === decided.accidentChoice; })[0];
+        accBody.innerHTML = '<p class="special-done">你的选择：' + (aopt ? aopt.label : '') + '</p>';
+      } else {
+        accBody.innerHTML = acc.options.map(function (o) {
+          return '<button class="mini-btn' + (o.cost ? '' : ' no') + '" data-acc="' + o.key + '">' +
+            '<b>' + o.label + '</b><small>' + o.sub + '</small></button>';
+        }).join('');
+      }
+    } else {
+      accCard.hidden = true;
+    }
+
     // —— 换挡提示：这个月比第一个月存得少，就问要不要下个月降档 ——
     var gearCard = $('#gearCard');
     var gearStatus = $('#gearStatus');
@@ -1013,8 +1082,8 @@
           grid.appendChild(div);
         });
       }
-    } else if (!eventResolved(ev, decided)) {
-      // 先经历事件，再看这个月能剩多少、怎么存
+    } else if (!eventResolved(ev, decided) || !accidentResolved(month)) {
+      // 先经历事件（和它的第二幕），再看这个月能剩多少、怎么存
       setIncomeVisible(true);
       $('#decideTitle').textContent = '先把这件事处理完。';
       grid.innerHTML = '<p class="decide-empty">处理完，才知道这个月还能剩多少。</p>';
@@ -1472,6 +1541,78 @@
     return isAskingEvent(ev) && ev.major === true;
   }
 
+  /* ---------- 意外：按场景触发 + 第二幕事件卡 ---------- */
+
+  function accidentRng(m) {
+    return mulberry32(90001 + m * 104729 + (state.birthday || 6) * 17);
+  }
+
+  /**
+   * 这个月有没有触发意外。第一幕（当月事件）没演完就不会有第二幕。
+   * 触发点按场景挂：旅行/演唱会/火车站 → 手机；开学季 → 诈骗；
+   * 期末 → 挂科；换季 → 住院。
+   */
+  function accidentFor(monthIndex) {
+    var ev = eventFor(monthIndex);
+    var d = state.near.decisions[monthIndex];
+    if (ev && !eventResolved(ev, d)) return null;
+    var dk = d ? d.eventChoice : null;
+    var mo = monthParts(monthIndex).month;
+    var scene = null;
+
+    if (ev) {
+      if (ev.key === 'summer' && dk && dk !== 'go-home') scene = 'phone';
+      else if (ev.key === 'concert') {
+        if (dk === 'scalper') scene = 'phone';
+        else if (dk && dk.indexOf('tier-') === 0) {
+          var tier = (ev.options || []).filter(function (o) { return o.key === dk; })[0];
+          if (tier && tier.win) scene = 'phone';
+        }
+      }
+      else if (ev.key === 'winter-home' && dk === 'yes') scene = 'phone';
+      else if (ev.key === 'final') scene = 'fail';
+      else if (ev.key === 'newterm2' || ev.key === 'intern') scene = 'fraud';
+    }
+    // 换季：没人安排，但身体会
+    if (!scene && [11, 12, 1, 3].indexOf(mo) >= 0) scene = 'illness';
+    if (!scene) return null;
+    if (accidentRng(monthIndex)() >= ACCIDENT_RATE[scene]) return null;
+    return ACCIDENTS[scene];
+  }
+
+  function accidentResolved(monthIndex) {
+    if (!accidentFor(monthIndex)) return true;
+    var d = state.near.decisions[monthIndex];
+    return !!(d && d.accidentChoice);
+  }
+
+  /** 应用意外卡的选择（回放时也走这里，结果确定）。 */
+  function applyAccidentChoice(monthIndex, acc, key) {
+    var opt = (acc.options || []).filter(function (o) { return o.key === key; })[0];
+    if (!opt) return;
+    var n = state.near;
+    var parts = monthParts(monthIndex);
+    var cost = opt.cost || 0;
+    if (cost > 0) spendCash(cost);
+    // 赌一把：输了再亏 1,200
+    if (typeof opt.gamble === 'number') {
+      if (accidentRng(monthIndex + 500)() > opt.gamble) {
+        spendCash(1200);
+        cost += 1200;
+      }
+    }
+    if (opt.rel) addRelation('朋友', opt.rel);
+    if (opt.flag) {
+      n.flags = n.flags || {};
+      n.flags[opt.flag] = true;
+    }
+    if (opt.memory) n.memories.push({ text: opt.memory, y: parts.year, m: parts.month });
+    n.events.push({
+      t: acc.name, y: parts.year, m: parts.month, amt: -cost,
+      note: opt.label, accident: true, chosen: true
+    });
+  }
+
   /* ---------- 事件应用 ---------- */
 
   function addRelation(name, delta) {
@@ -1586,6 +1727,8 @@
       var d = state.near.decisions[m];
       // 事件还没处理完（含抢票失败后的黄牛/放弃）：等
       if (!eventResolved(ev, d)) return;
+      // 第二幕意外还没回应：等
+      if (!accidentResolved(m)) return;
 
       if (state.pace === 'yearly') {
         var y = yearIndex(m);
@@ -1816,6 +1959,19 @@
     // 抢票失败时还要继续选（找黄牛 / 算了），不自动推进
     var opt = (ev.options || []).filter(function (o) { return o.key === key; })[0];
     if (ev.key === 'concert' && opt && opt.win === false) return;
+    maybeAdvance();
+  }
+
+  /** 回应意外卡（第二幕）。 */
+  function decideAccident(key) {
+    var month = state.slider;
+    var acc = accidentFor(month);
+    if (!acc) return;
+    var d = state.near.decisions[month] || {};
+    d.accidentChoice = key;
+    state.near.decisions[month] = d;
+    runNearTo(month);
+    renderNear();
     maybeAdvance();
   }
 
@@ -2418,7 +2574,7 @@
     state.budget = 1800; state.amount = 15; state.habit = 5;
     state.pace = 'monthly'; state.timelineMode = 'near'; state.slider = 0;
     state.rate = 0.08; state.inflation = false;
-    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], decisions: {}, plans: {}, eventCache: {}, relations: {}, memories: [], romance: null, gearSet: {}, baseline: null, monthLog: [], done84: false };
+    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], decisions: {}, plans: {}, eventCache: {}, relations: {}, flags: {}, memories: [], romance: null, gearSet: {}, baseline: null, monthLog: [], done84: false };
     state.far = { actual: 0, ideal: 0, zero: 0, years: 0, series: { actual: [], ideal: [], zero: [] } };
     $('#inflationToggle').checked = false;
     $$('.chip').forEach(function (c) { c.classList.remove('is-on'); });
@@ -2461,6 +2617,13 @@
       var gear = node.closest('[data-gear]');
       if (gear) {
         answerGear(gear.getAttribute('data-gear'));
+        return;
+      }
+
+      // 意外卡（第二幕）
+      var accBtn = node.closest('[data-acc]');
+      if (accBtn) {
+        decideAccident(accBtn.getAttribute('data-acc'));
         return;
       }
 

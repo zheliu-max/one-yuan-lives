@@ -812,6 +812,103 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   color: var(--jade);
 }
 
+/* 意外概率说明（封面） */
+.rules-card {
+  margin: 14px 0 4px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 253, 248, .82);
+  text-align: left;
+}
+.rules-title {
+  margin: 0 0 5px;
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 15px;
+  font-weight: 600;
+}
+.rules-text {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #6b5c4b;
+}
+.rules-text b { color: #4a4038; }
+.prob-chart { display: flex; flex-direction: column; gap: 6px; }
+.prob-row {
+  display: grid;
+  grid-template-columns: 62px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #6b5c4b;
+}
+.prob-row i {
+  display: block;
+  height: 7px;
+  border-radius: 4px;
+  background: #ece0cf;
+  overflow: hidden;
+}
+.prob-row i b {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #d9a06a, #b5773c);
+  animation: probGrow .9s cubic-bezier(.2, .7, .3, 1) both;
+}
+.prob-row em {
+  font-style: normal;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--warm);
+  font-weight: 600;
+}
+.prob-note {
+  margin: 9px 0 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #9a8b78;
+}
+@keyframes probGrow { from { width: 0 !important; } }
+
+/* 意外卡（第二幕） */
+.accident {
+  margin-top: 10px;
+  padding: 13px 14px;
+  border: 1px solid #dfb9a8;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #fff6f1, #fdf0e9);
+  animation: drawerIn .32s ease;
+}
+.accident-head { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 7px; }
+.accident-emoji { font-size: 22px; line-height: 1; }
+.accident-tag {
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  color: #b3402c;
+  font-weight: 600;
+}
+.accident-title {
+  margin: 2px 0 0;
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #7a2f20;
+}
+.accident-text {
+  margin: 0 0 7px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #4a4038;
+}
+.accident-prob {
+  margin: 0 0 10px;
+  font-size: 10.5px;
+  color: #9a7a68;
+}
+.accident-body { display: flex; flex-direction: column; gap: 7px; }
+
 /* 回放卡 */
 .recap-card {
   padding: 16px;

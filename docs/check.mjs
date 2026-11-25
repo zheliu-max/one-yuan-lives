@@ -109,6 +109,16 @@ check('降档会降低固定支出', js.includes('profileFixedDowngraded'))
 check('规则对玩家可见', js.includes('降档只影响下一个月'))
 check('决策合并不覆盖换挡选择', js.includes('别把这个月已经做过的换挡/事件选择冲掉'))
 
+// v3.5：意外系统（按场景触发 + 第二幕卡）
+check('封面有意外概率图', html.includes('prob-chart') && html.includes('class="prob-row"'))
+check('封面有意外说明', html.includes('这一路会有意外'))
+check('机器屏有意外卡', html.includes('id="accidentCard"'))
+check('意外按场景触发', js.includes('function accidentFor') && js.includes('ACCIDENT_RATE'))
+check('意外不再是每年掷一次', !js.includes('accTotal'))
+check('意外有拒绝/硬扛选项', js.includes("'borrow'") && js.includes("'endure'") && js.includes("'delay'"))
+check('意外花费计入当月闲钱', js.includes('accidentCostFor'))
+check('意外单次概率按年化反推', js.includes('0.035') && js.includes('0.015') && js.includes('0.007'))
+
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
 const fvSingle = (p, r, n) => p * Math.pow(1 + r, n)
