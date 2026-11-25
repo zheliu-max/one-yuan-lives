@@ -46,6 +46,8 @@
       relations: {},         // 朋友名字 -> 关系值
       memories: [],          // 值得回看的记忆
       romance: null,         // 恋爱状态
+      gearSet: {},           // 月份索引 -> 该月是否降档
+      baseline: null,        // 第一个月存下的钱（换挡基准）
       monthLog: []           // 逐月流水，用于回看
     },
     far: {                    // 长期三线
@@ -125,9 +127,12 @@
     return state.budget;
   }
 
-  // 每月固定支出：按生活档案算，并允许真实波动（±8%）
+  // 每月固定支出：按生活档案算；降档月用最省的一档；并允许真实波动（±8%）
   function monthlyBase(monthIndex) {
-    var base = state.profile ? profileFixed() : Math.round(state.budget * 0.55);
+    var downgraded = typeof monthIndex === 'number' && state.near.gearSet && state.near.gearSet[monthIndex];
+    var base = state.profile
+      ? (downgraded ? profileFixedDowngraded() : profileFixed())
+      : Math.round(state.budget * 0.55);
     if (typeof monthIndex !== 'number' || !state.profile) return base;
     var rnd = monthRng(monthIndex);
     var wave = 1 + (rnd() - 0.5) * 0.16;   // 0.92 ~ 1.08
@@ -318,6 +323,37 @@
     return list.length ? list[0] : null;
   }
 
+  /** 已经降档过几次。 */
+  function gearDowngradeCount() {
+    var c = 0;
+    for (var m = 0; m < NEAR_MONTHS; m++) {
+      var d = state.near.decisions[m];
+      if (d && d.gearChoice === 'downgrade') c++;
+    }
+    return c;
+  }
+
+  /**
+   * 换挡规则：某个月选了「降档」，只影响紧接着的下一个月；
+   * 累计降档超过 3 次后，从第 4 次起不再回调（一直保持降档）。
+   * @returns 月份索引 -> 是否降档
+   */
+  function computeGearSet() {
+    var set = {};
+    var count = 0;
+    for (var m = 0; m < NEAR_MONTHS; m++) {
+      var d = state.near.decisions[m];
+      if (!d || d.gearChoice !== 'downgrade') continue;
+      count++;
+      if (count > 3) {
+        for (var k = m + 1; k < NEAR_MONTHS; k++) set[k] = true;
+        break;
+      }
+      if (m + 1 < NEAR_MONTHS) set[m + 1] = true;
+    }
+    return set;
+  }
+
   /**
    * 重放到第 monthIndex 个月：玩家在 state.near.decisions 里的选择会被应用，
    * 没有记录决策的月份按"默认分配"（全部存起来）处理。
@@ -330,6 +366,7 @@
     n.memories = [];
     n.relations = {};
     n.romance = null;
+    n.gearSet = computeGearSet();
     // 每年意外结果需要稳定：用固定种子重放，保证回看不乱跳
     var rnd = mulberry32(20260901 + (state.birthday || 6));
     for (var m = 0; m <= monthIndex; m++) {
@@ -894,6 +931,34 @@
       $('#specialCard').hidden = true;
     }
 
+    // —— 换挡提示：这个月比第一个月存得少，就问要不要下个月降档 ——
+    var gearCard = $('#gearCard');
+    var gearStatus = $('#gearStatus');
+    var baseSaved = state.near.baseline;
+    var downgradedNow = !!(state.near.gearSet && state.near.gearSet[month]);
+
+    gearCard.hidden = true;
+    if (downgradedNow) {
+      gearStatus.hidden = false;
+      gearStatus.textContent = '这个月降档中：食堂 + 单车 + 少出去，固定支出降到 ' +
+        fmtMoney(profileFixedDowngraded()) + '。' +
+        (gearDowngradeCount() > 3 ? '（已超过 3 次，不再调回）' : '下个月自动调回原档。');
+    } else {
+      gearStatus.hidden = true;
+    }
+
+    if (state.pace === 'monthly' && month >= 1 && typeof baseSaved === 'number' && canDowngrade() &&
+      gearDowngradeCount() <= 3 && eventResolved(ev, decided) && !(decided && decided.gearChoice)) {
+      var freeNow = monthFreeMoney(month);
+      if (freeNow < baseSaved) {
+        gearCard.hidden = false;
+        $('#gearText').textContent = '第一个月你能存下 ' + fmtMoney(baseSaved) +
+          '，这个月只剩 ' + fmtMoney(freeNow) + '（少了 ' + fmtMoney(baseSaved - freeNow) + '）。';
+        $('#gearRule').textContent = '规则：降档只影响下一个月，再下个月自动调回原档；' +
+          '累计降档超过 3 次后不再调回。你目前降档 ' + gearDowngradeCount() + ' 次。';
+      }
+    }
+
     // —— 节奏相关界面：学年方案 / 学年结算 / 逐月决策 ——
     var grid = $('#decideGrid');
     var planCard = $('#planCard');
@@ -1261,6 +1326,26 @@
   /** 同样的画像换成最省的一档，用来做对照。 */
   function profileFixedFrugal() {
     return (4 + 12 + 10) * 30 + 15 + DAILY_COST + TELECOM_COST + 50;
+  }
+
+  /**
+   * 降一档：在现有档案基础上每顿各砍一点、交通改单车、社交减半，
+   * 但不低于最省的下限。已经是最省的人降不动。
+   */
+  function profileFixedDowngraded() {
+    var p = state.profile;
+    if (!p || !profileAnswered()) return profileFixedFrugal();
+    var b = Math.max(4, (p.breakfast || 0) - 2);
+    var l = Math.max(12, (p.lunch || 0) - 3);
+    var d = Math.max(10, (p.dinner || 0) - 2);
+    var transport = Math.min(p.transport || 15, 15);
+    var social = Math.max(50, Math.round((p.social || 0) / 2));
+    return (b + l + d) * 30 + transport + DAILY_COST + TELECOM_COST + social;
+  }
+
+  /** 还能不能再降。 */
+  function canDowngrade() {
+    return profileFixedDowngraded() < profileFixed();
   }
 
   /* ---------- 事件引擎：按月份确定性生成 ---------- */
@@ -1707,7 +1792,10 @@
     if (free <= 0) return;
     var plan = {};
     plan[key] = free;
-    state.near.decisions[month] = { plan: plan };
+    // 合并而不是覆盖：别把这个月已经做过的换挡/事件选择冲掉
+    var d = state.near.decisions[month] || {};
+    d.plan = plan;
+    state.near.decisions[month] = d;
     runNearTo(month);
     renderNear();
     maybeAdvance();
@@ -1731,6 +1819,17 @@
     maybeAdvance();
   }
 
+  /** 回答换挡提示：降档 / 不降。 */
+  function answerGear(choice) {
+    var month = state.slider;
+    var d = state.near.decisions[month] || {};
+    d.gearChoice = choice;
+    state.near.decisions[month] = d;
+    runNearTo(month);
+    renderNear();
+    maybeAdvance();
+  }
+
   /** 当前选择的同行者（旅行用）。 */
   var travelCompanion = 'solo';
 
@@ -1744,6 +1843,10 @@
 
   /** 下一个月。 */
   function nextMonth() {
+    // 离开第一个月时，把它存下的钱记成基准
+    if (state.slider === 0 && typeof state.near.baseline !== 'number') {
+      state.near.baseline = monthFreeMoney(0);
+    }
     if (state.slider >= NEAR_MONTHS - 1) {
       go('replay');
       return;
@@ -2315,7 +2418,7 @@
     state.budget = 1800; state.amount = 15; state.habit = 5;
     state.pace = 'monthly'; state.timelineMode = 'near'; state.slider = 0;
     state.rate = 0.08; state.inflation = false;
-    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], decisions: {}, plans: {}, eventCache: {}, relations: {}, memories: [], romance: null, monthLog: [], done84: false };
+    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], decisions: {}, plans: {}, eventCache: {}, relations: {}, memories: [], romance: null, gearSet: {}, baseline: null, monthLog: [], done84: false };
     state.far = { actual: 0, ideal: 0, zero: 0, years: 0, series: { actual: [], ideal: [], zero: [] } };
     $('#inflationToggle').checked = false;
     $$('.chip').forEach(function (c) { c.classList.remove('is-on'); });
@@ -2351,6 +2454,13 @@
       var comp = node.closest('[data-comp]');
       if (comp) {
         setCompanion(comp.getAttribute('data-comp'));
+        return;
+      }
+
+      // 换挡
+      var gear = node.closest('[data-gear]');
+      if (gear) {
+        answerGear(gear.getAttribute('data-gear'));
         return;
       }
 

@@ -100,6 +100,15 @@ check('每月有 ±8% 波动', js.includes('0.16') && js.includes('wave'))
 check('账本里有生活档案', html.includes('id="profileSection"'))
 check('不再用预算系数兜底做主路径', js.includes("state.budget * 0.55"))
 
+// v3.4：换挡
+check('有换挡提示卡', html.includes('id="gearCard"'))
+check('换挡有基准（第一月）', js.includes('baseline'))
+check('降档只影响下一个月', js.includes('set[m + 1] = true'))
+check('超过 3 次不再回调', js.includes('count > 3'))
+check('降档会降低固定支出', js.includes('profileFixedDowngraded'))
+check('规则对玩家可见', js.includes('降档只影响下一个月'))
+check('决策合并不覆盖换挡选择', js.includes('别把这个月已经做过的换挡/事件选择冲掉'))
+
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
 const fvSingle = (p, r, n) => p * Math.pow(1 + r, n)
