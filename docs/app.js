@@ -334,14 +334,13 @@
     var rnd = mulberry32(20260901 + (state.birthday || 6));
     for (var m = 0; m <= monthIndex; m++) {
       advanceNearMonth(m, rnd);
-      // 应用玩家在这个月的决策（如果有）
       var d = n.decisions[m];
-      if (d && d.plan) applyPlan(m, d.plan);
-      // 应用事件决定
+      // 顺序很重要：先经历事件（花掉的钱从现金扣），再分配剩下的闲钱
       if (d && d.eventChoice) {
         var ev = eventFor(m);
         if (ev) applyEventChoice(m, ev, d.eventChoice, { companion: d.companion, basePrice: d.basePrice });
       }
+      if (d && d.plan) applyPlan(m, d.plan);
     }
     n.done84 = monthIndex >= NEAR_MONTHS - 1;
   }
@@ -369,14 +368,55 @@
     return g ? g.amount : 0;
   }
 
-  /** 本月可自由分配的闲钱。 */
+  /** 已选事件实际花掉的钱（用于从本月闲钱里扣除）。 */
+  function eventCostFor(monthIndex, decision) {
+    if (!decision || !decision.eventChoice) return 0;
+    var ev = eventFor(monthIndex);
+    if (!ev) return 0;
+    var key = decision.eventChoice;
+
+    if (ev.key === 'concert') {
+      if (key === 'scalper') {
+        return (decision.basePrice || 680) + ((ev.scalper && ev.scalper.extra) || 300);
+      }
+      var tier = (ev.options || []).filter(function (o) { return o.key === key; })[0];
+      if (!tier || tier.win === false) return 0;
+      return tier.cost || 0;
+    }
+
+    if (ev.key === 'summer') {
+      var place = (ev.options || []).filter(function (o) { return o.key === key; })[0];
+      if (!place || !place.cost) return 0;
+      var comp = null;
+      (ev.companions || []).forEach(function (c) { if (c.key === decision.companion) comp = c; });
+      if (!comp) comp = (ev.companions || [])[0];
+      var factor = comp ? comp.factor : 1;
+      return Math.round(place.cost * factor / 10) * 10;
+    }
+
+    var opt = (ev.options || []).filter(function (o) { return o.key === key; })[0];
+    return opt ? (opt.cost || 0) : 0;
+  }
+
+  /** 这个月的事件是否已经处理完（抢票失败还要再选黄牛/放弃）。 */
+  function eventResolved(ev, decision) {
+    if (!isAskingEvent(ev)) return true;
+    if (!decision || !decision.eventChoice) return false;
+    if (ev.key === 'concert') {
+      var opt = (ev.options || []).filter(function (o) { return o.key === decision.eventChoice; })[0];
+      if (opt && opt.win === false) return false;   // 还没选黄牛或放弃
+    }
+    return true;
+  }
+
+  /** 本月可自由分配的闲钱（先扣掉事件花掉的）。 */
   function monthFreeMoney(monthIndex) {
-    var n = state.near;
     var allowance = monthlyAllowance();
     var base = monthlyBase(monthIndex);
     var extra = monthGain(monthIndex);
     var habitCut = state.amount * 30;
-    return Math.max(0, allowance + extra - base - habitCut);
+    var spent = eventCostFor(monthIndex, state.near.decisions[monthIndex]);
+    return Math.max(0, allowance + extra - base - habitCut - spent);
   }
 
   function nearPocketTotal() {
@@ -827,6 +867,14 @@
           var costText = chosenOpt.cost ? '（−' + fmtMoney(chosenOpt.cost) + '）' : '';
           evBody.innerHTML = '<p class="special-done">你选择了：' + chosenOpt.label + costText + '</p>';
         }
+        // 事件花掉的钱直接从本月闲钱里出，把"还剩多少"摆出来
+        if (eventResolved(ev, decided)) {
+          var spend = eventCostFor(month, decided);
+          if (spend > 0) {
+            evBody.innerHTML += '<p class="comp-hint">这件事花掉 ' + fmtMoney(spend) +
+              '，这个月还剩 ' + fmtMoney(free) + ' 可以分配。</p>';
+          }
+        }
       } else if (ev.options && ev.options.length) {
         var html = '';
         if (ev.companions) {
@@ -839,6 +887,7 @@
           return '<button class="mini-btn' + (o.key === 'skip' ? ' no' : '') + '" data-ev="' + o.key + '">' +
             '<b>' + o.label + '</b>' + (o.sub ? '<small>' + o.sub + '</small>' : '') + '</button>';
         }).join('');
+        html += '<p class="comp-hint">这笔钱从本月闲钱里出，选完再看还剩多少。</p>';
         evBody.innerHTML = html;
       }
     } else {
@@ -852,7 +901,7 @@
     var y = yearIndex(month);
     var yearPlan = state.near.plans[y];
     var isYearEnd = (month % 12) === 11;
-    var spPending = isMajorEvent(ev) && !(decided && decided.eventChoice);
+    var spPending = !eventResolved(ev, decided);
 
     planCard.hidden = true;
     settleCard.hidden = true;
@@ -899,6 +948,11 @@
           grid.appendChild(div);
         });
       }
+    } else if (!eventResolved(ev, decided)) {
+      // 先经历事件，再看这个月能剩多少、怎么存
+      setIncomeVisible(true);
+      $('#decideTitle').textContent = '先把这件事处理完。';
+      grid.innerHTML = '<p class="decide-empty">处理完，才知道这个月还能剩多少。</p>';
     } else if (free <= 0) {
       setIncomeVisible(true);
       $('#decideTitle').textContent = '这个月没有闲钱可以分。';
@@ -1350,6 +1404,25 @@
     n.cash -= rest;
   }
 
+  /**
+   * 事件花销从"这个月的现金"里出——因为事件发生在分配之前。
+   * 现金不够时依次动用手边口袋；仍然不够就记为超支（负现金）。
+   */
+  function spendCash(amount) {
+    var n = state.near;
+    if (!amount) return;
+    if (n.cash >= amount) { n.cash -= amount; return; }
+    var rest = amount - Math.max(0, n.cash);
+    n.cash = 0;
+    var order = ['freedom', 'memory', 'relation', 'skill', 'money'];
+    for (var i = 0; i < order.length && rest > 0; i++) {
+      var take = Math.min(n[order[i]], rest);
+      n[order[i]] -= take;
+      rest -= take;
+    }
+    if (rest > 0) n.cash -= rest;   // 超支
+  }
+
   /** 应用一次事件选择（回放时也走这里，保证确定性）。 */
   function applyEventChoice(monthIndex, ev, key, extra) {
     var n = state.near;
@@ -1368,10 +1441,10 @@
       var fake = ev.scalper && ev.scalper.fake;
       var price = (extra && extra.basePrice ? extra.basePrice : 680) + (ev.scalper ? ev.scalper.extra : 300);
       if (fake) {
-        spendFrom('memory', price);
+        spendCash(price);
         n.events.push({ t: '买到了假票', y: y, m: mo, amt: -price, note: '报警也追不回来', special: 'concert', chosen: true });
       } else {
-        spendFrom('memory', price);
+        spendCash(price);
         n.events.push({ t: '看了' + ev.artist.name, y: y, m: mo, amt: -price, note: '黄牛加价', special: 'concert', chosen: true });
         n.memories.push({ text: '看了' + ev.artist.name, y: y, m: mo });
       }
@@ -1384,7 +1457,7 @@
       (ev.companions || []).forEach(function (c) { if (c.key === (extra && extra.companion)) comp = c; });
       if (!comp) comp = (ev.companions || [])[0] || { key: 'solo', name: '一个人', factor: 1, romance: false };
       var cost = Math.round(opt.cost * comp.factor / 10) * 10;
-      if (cost > 0) spendFrom('memory', cost);
+      if (cost > 0) spendCash(cost);
       n.events.push({
         t: opt.place === '哪也不去' ? '暑假留在家里' : '去了' + opt.place,
         y: y, m: mo, amt: -cost, note: comp.name, special: 'summer', chosen: cost > 0
@@ -1400,7 +1473,7 @@
 
     // 通用
     var cost2 = opt.cost || 0;
-    if (cost2 > 0) spendFrom(opt.pocket, cost2);
+    if (cost2 > 0) spendCash(cost2);
     if (ev.friend && opt.rel) addRelation(ev.friend.name, opt.rel);
     if (opt.memory && cost2 > 0) n.memories.push({ text: opt.memory, y: y, m: mo });
     n.events.push({
@@ -1426,8 +1499,8 @@
       var m = state.slider;
       var ev = eventFor(m);
       var d = state.near.decisions[m];
-      // 大日子还没回应：等
-      if (isMajorEvent(ev) && !(d && d.eventChoice)) return;
+      // 事件还没处理完（含抢票失败后的黄牛/放弃）：等
+      if (!eventResolved(ev, d)) return;
 
       if (state.pace === 'yearly') {
         var y = yearIndex(m);
