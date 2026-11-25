@@ -18,7 +18,10 @@ const css = readFileSync(join(dir, 'styles.css'), 'utf8')
 const js = readFileSync(join(dir, 'app.js'), 'utf8')
 
 for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
-  check(`asset ${match[1]}`, existsSync(join(dir, match[1])))
+  const raw = match[1]
+  if (/^(https?:|data:|#)/.test(raw)) continue
+  const path = raw.split('?')[0].split('#')[0]   // 去掉 ?v= 缓存版本号
+  check(`asset ${path}`, existsSync(join(dir, path)))
 }
 
 // app.js 里 $('...') 选中的 id 必须存在于 HTML；运行时动态创建的例外

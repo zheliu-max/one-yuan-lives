@@ -19,19 +19,24 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  background: #100e0c;
   background: var(--paper);
 }
 
 body {
   margin: 0;
+  color: #ece3d4;
   color: var(--ink);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   line-height: 1.62;
+  /* 纯色底兜底：即使渐变/背景图在某些手机浏览器上不绘制，也不会露白 */
+  background-color: #100e0c;
   background-color: var(--paper);
   background-image:
-    radial-gradient(120% 80% at 50% -12%, #1a1612 0%, #100e0c 50%, #080706 100%);
+    radial-gradient(120% 80% at 50% -12%, #1a1612 0%, #100e0c 55%, #080706 100%);
+  background-size: 100% 100%;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-position: center top;
   min-height: 100%;
 }
 
@@ -783,7 +788,7 @@ body[data-season="winter"] .season-layer i { background: #54636b; border-radius:
   background: var(--card);
   transition: opacity .3s ease, filter .3s ease;
 }
-.arch-q.is-locked { opacity: .38; filter: grayscale(.4); pointer-events: none; }
+.arch-q.is-locked { opacity: .55; filter: grayscale(.25); pointer-events: none; }
 .arch-scene {
   margin: 0 0 3px;
   font-size: 11.5px;
