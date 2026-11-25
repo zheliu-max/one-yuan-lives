@@ -476,13 +476,53 @@ body[data-season="winter"] {
   border-radius: 13px 13px 0 0;
   overflow: hidden;
   line-height: 0;
-  background: rgba(255, 250, 241, .5);
+  background: #16130f;
 }
 .special-scene svg {
   display: block;
   width: 100%;
   height: auto;
 }
+
+/* 真实场景照片 */
+.scene-photo {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: linear-gradient(140deg, #1b1713, #24201a);
+}
+.scene-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(.82) contrast(1.04) brightness(.88);
+  transition: transform .6s cubic-bezier(.2, .7, .3, 1);
+}
+.special:hover .scene-photo img { transform: scale(1.02); }
+.scene-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(16, 14, 12, .1) 0%, rgba(16, 14, 12, .18) 45%, rgba(16, 14, 12, .72) 100%),
+    linear-gradient(90deg, rgba(16, 14, 12, .35) 0%, transparent 40%);
+}
+.scene-photo figcaption {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 2;
+  max-width: 74%;
+  text-align: right;
+  font-size: 8.5px;
+  line-height: 1.4;
+  letter-spacing: .03em;
+  color: rgba(236, 227, 212, .48);
+}
+.scene-photo.is-missing { display: none; }
 
 /* 节奏切换 / 学年方案 / 学年结算 */
 .pace-seg {

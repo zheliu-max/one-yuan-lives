@@ -1,5 +1,5 @@
 // 结构自检：文件存在、引用的本地资源齐全、关键元素与 DOM 契约一致。
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const dir = join(process.cwd(), 'docs')
@@ -152,6 +152,16 @@ check('深色编辑风配色', css.includes('--paper: #100e0c') && css.includes(
 check('暗角与颗粒叠层', css.includes('body::after') && css.includes('repeating-linear-gradient'))
 check('插画改为细线母题', js.includes('var MOTIFS') && js.includes('var SCENE_MOTIF'))
 check('已移除卡通 emoji', !/[\u{1F300}-\u{1FAFF}]/u.test(html) && !/[\u{1F300}-\u{1FAFF}]/u.test(js))
+
+// v6：真实场景照片
+check('有照片映射', js.includes('var EVENT_PHOTO') && js.includes('function photoFor'))
+check('旅行按目的地换图', js.includes('var TRAVEL_PHOTO') && js.includes("'go-chengdu': 'chengdu'"))
+check('照片带署名', js.includes('var PHOTO_CREDIT') && js.includes('figcaption'))
+check('照片样式', css.includes('.scene-photo img') && css.includes('aspect-ratio: 16 / 9'))
+const imgDir = join(dir, 'img')
+const imgFiles = existsSync(imgDir) ? readdirSync(imgDir).filter((f) => f.endsWith('.jpg')) : []
+check('照片文件齐全（≥ 18 张）', imgFiles.length >= 18, `实际 ${imgFiles.length}`)
+check('有授权说明', existsSync(join(imgDir, 'CREDITS.md')))
 
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r

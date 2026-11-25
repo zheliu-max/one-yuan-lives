@@ -301,6 +301,91 @@
   function sceneSVG(key) {
     return MOTIFS[SCENE_MOTIF[key] || 'time'] || MOTIFS.time;
   }
+  /* ---------- 事件照片：真实场景 ---------- */
+
+  /** 事件 → 照片。旅行按选中的目的地切换。 */
+  var EVENT_PHOTO = {
+    'winter-home': 'station', 'callback-home': 'station',
+    'lucky-money': 'redpacket',
+    'newterm': 'campus', 'newterm2': 'campus', 'club': 'campus',
+    'final': 'library', 'scholar': 'library', 'kaoyan': 'library', 'cet': 'library', 'fu-delay': 'library',
+    'qingming': 'qixia', 'autumn': 'qixia',
+    'labour': 'yangzhou',
+    'summer': 'huangshan',
+    'intern': 'office',
+    'double11': 'parcels',
+    'graduation': 'graduation',
+    'newyear': 'fireworks',
+    'birthday': 'birthday',
+    'concert': 'concert',
+    'dorm': 'dorm',
+    'dating': 'couple',
+    'fu-phone': 'phone'
+  };
+
+  /** 暑假：用了哪个目的地就用哪个地方的照片。 */
+  var TRAVEL_PHOTO = {
+    'go-yangzhou': 'yangzhou', 'go-huangshan': 'huangshan', 'go-qingdao': 'qingdao',
+    'go-xian': 'xian', 'go-chengdu': 'chengdu', 'go-sanya': 'sanya'
+  };
+
+  var PHOTO_CREDIT = {
+    qixia: { a: 'Haha169', l: 'CC BY-SA 4.0' },
+    yangzhou: { a: 'Amarespeco', l: 'CC BY-SA 4.0' },
+    chengdu: { a: 'CEphoto, Uwe Aranas', l: 'CC BY-SA 3.0' },
+    xian: { a: 'Ideophagous', l: 'CC BY-SA 4.0' },
+    sanya: { a: 'Dale Preston', l: 'Public domain' },
+    qingdao: { a: 'User: (WT-shared) Shoestring at wts wikivo', l: 'Public domain' },
+    huangshan: { a: 'Miaulian', l: 'CC BY-SA 3.0' },
+    campus: { a: '武铁辆玻', l: 'CC BY-SA 2.0' },
+    library: { a: '猫猫的日记本', l: 'CC BY-SA 3.0' },
+    concert: { a: 'Kritzolina', l: 'CC BY-SA 4.0' },
+    station: { a: '长安街上的灯', l: 'CC BY-SA 4.0' },
+    birthday: { a: 'Billjones94', l: 'CC BY-SA 4.0' },
+    parcels: { a: 'Lordcolus', l: 'CC BY 2.0' },
+    graduation: { a: 'Unknown', l: 'see source' },
+    office: { a: 'Unknown', l: 'see source' },
+    redpacket: { a: 'AH-LOD', l: 'CC BY-SA 4.0' },
+    fireworks: { a: 'Chris Phutully from Australia', l: 'CC BY 2.0' },
+    dorm: { a: 'Gary Todd from Xinzheng, China', l: 'CC0' },
+    couple: { a: 'Krzysztof Popławski', l: 'CC BY-SA 4.0' },
+    phone: { a: 'MerveillePédia', l: 'CC BY-SA 3.0' }
+  };
+
+  /** 取这个事件该显示的照片（含署名信息）；没有就返回 null，回落到线稿母题。 */
+  function photoFor(ev, decision) {
+    if (!ev) return null;
+    var imgKey = null;
+    if (ev.key === 'summer') {
+      if (decision && decision.eventChoice && TRAVEL_PHOTO[decision.eventChoice]) {
+        imgKey = TRAVEL_PHOTO[decision.eventChoice];
+      } else if (ev.options) {
+        var firstPaid = ev.options.filter(function (o) { return o.cost > 0; })[0];
+        imgKey = firstPaid ? TRAVEL_PHOTO[firstPaid.key] : null;
+      }
+    } else if (ev.key.indexOf('friend-') === 0) {
+      imgKey = 'birthday';
+    } else {
+      imgKey = EVENT_PHOTO[ev.key] || null;
+    }
+    if (!imgKey) return null;
+    var cr = PHOTO_CREDIT[imgKey] || { a: '', l: '' };
+    return {
+      src: 'img/' + imgKey + '.jpg',
+      credit: cr.a ? (cr.a + (cr.l ? ' · ' + cr.l : '')) : ''
+    };
+  }
+
+  function sceneHTML(ev, decision) {
+    var pic = photoFor(ev, decision);
+    if (!pic) return sceneSVG(ev ? ev.key : '');
+    return '<figure class="scene-photo">' +
+      '<img src="' + pic.src + '" alt="" loading="lazy" decoding="async" ' +
+      'onerror="this.parentNode.classList.add(\'is-missing\')">' +
+      (pic.credit ? '<figcaption>' + pic.credit + '</figcaption>' : '') +
+      '</figure>';
+  }
+
 
 
   /**
@@ -988,7 +1073,7 @@
       $('#specialText').textContent = ev.title + '：' + ev.text;
       // 每个日子配一张内联 SVG 插画（离线可用）
       var sceneEl = $('#specialScene');
-      sceneEl.innerHTML = sceneSVG(ev.key);
+      sceneEl.innerHTML = sceneHTML(ev, decided);
       evBody.innerHTML = '';
 
       var chosenOpt = (ev.options || []).filter(function (o) { return o.key === (decided && decided.eventChoice); })[0];
