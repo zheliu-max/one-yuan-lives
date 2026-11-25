@@ -15,6 +15,12 @@
 
 * { box-sizing: border-box; }
 
+/* 浏览器给按钮/输入框默认黑色文字，深色主题下必须显式继承 */
+button, input, select, textarea {
+  color: inherit;
+  font-family: inherit;
+}
+
 [hidden] { display: none !important; }
 
 html {
@@ -812,7 +818,7 @@ body[data-season="winter"] .season-layer i { background: #54636b; border-radius:
 }
 .arch-opt:hover { border-color: #c3a985; transform: translateY(-1px); }
 .arch-opt.is-on { border-color: var(--warm); background: #2a211a; }
-.arch-opt b { font-size: 14px; }
+.arch-opt b { font-size: 14.5px; font-weight: 600; color: #f6ecd8; }
 .arch-opt small { font-size: 11.5px; color: var(--ink-soft); }
 
 .archive-summary {
