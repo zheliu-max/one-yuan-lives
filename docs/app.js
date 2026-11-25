@@ -148,7 +148,7 @@
 
   var STAT_KEYS = ['study', 'social', 'exp', 'body'];
   var STAT_NAMES = { study: '学业', social: '社交', exp: '经历', body: '身体' };
-  var STAT_ICONS = { study: '📖', social: '🤝', exp: '🌍', body: '💪' };
+  var STAT_MARKS = { study: '学', social: '社', exp: '历', body: '身' };
 
   function clampStat(v) { return Math.max(0, Math.min(10, Math.round(v * 10) / 10)); }
 
@@ -186,19 +186,19 @@
 
   // 学年方案：定一次，之后每月自动按它分配闲钱
   var PLANS = [
-    { key: 'frugal', name: '省吃俭用', icon: '🪙', desc: '一半存起来，剩下的紧着花', split: { money: 0.5, skill: 0.2, memory: 0.1, relation: 0.1, freedom: 0.1 } },
-    { key: 'balanced', name: '平衡', icon: '⚖️', desc: '存一些，也留一点给生活', split: { money: 0.3, skill: 0.2, memory: 0.25, relation: 0.15, freedom: 0.1 } },
-    { key: 'experience', name: '活在当下', icon: '🎒', desc: '多去一些地方，少存一点', split: { money: 0.1, skill: 0.1, memory: 0.45, relation: 0.25, freedom: 0.1 } },
-    { key: 'growth', name: '自我投资', icon: '📚', desc: '把钱花在能力和证书上', split: { money: 0.2, skill: 0.45, memory: 0.15, relation: 0.1, freedom: 0.1 } }
+    { key: 'frugal', name: '省吃俭用', icon: '存', desc: '一半存起来，剩下的紧着花', split: { money: 0.5, skill: 0.2, memory: 0.1, relation: 0.1, freedom: 0.1 } },
+    { key: 'balanced', name: '平衡', icon: '衡', desc: '存一些，也留一点给生活', split: { money: 0.3, skill: 0.2, memory: 0.25, relation: 0.15, freedom: 0.1 } },
+    { key: 'experience', name: '活在当下', icon: '历', desc: '多去一些地方，少存一点', split: { money: 0.1, skill: 0.1, memory: 0.45, relation: 0.25, freedom: 0.1 } },
+    { key: 'growth', name: '自我投资', icon: '学', desc: '把钱花在能力和证书上', split: { money: 0.2, skill: 0.45, memory: 0.15, relation: 0.1, freedom: 0.1 } }
   ];
 
   // 每月决策选项：玩家把一个月的闲钱分配到这里
   var DECISIONS = [
-    { key: 'money', label: '存起来', icon: '💰', note: '放进钱袋，等复利', pocket: 'money' },
-    { key: 'skill', label: '买书 / 报课', icon: '📚', note: '考级、考研资料、技能课', pocket: 'skill' },
-    { key: 'memory', label: '攒旅行基金', icon: '🎒', note: '为一次出发攒钱', pocket: 'memory' },
-    { key: 'relation', label: '请客 / 顾家', icon: '🍲', note: '室友聚会、给家里买点', pocket: 'relation' },
-    { key: 'freedom', label: '留作应急', icon: '🛟', note: '应付突然的一天', pocket: 'freedom' }
+    { key: 'money', label: '存起来', icon: '存', note: '放进钱袋，等复利', pocket: 'money' },
+    { key: 'skill', label: '买书 / 报课', icon: '学', note: '考级、考研资料、技能课', pocket: 'skill' },
+    { key: 'memory', label: '攒旅行基金', icon: '历', note: '为一次出发攒钱', pocket: 'memory' },
+    { key: 'relation', label: '请客 / 顾家', icon: '人', note: '室友聚会、给家里买点', pocket: 'relation' },
+    { key: 'freedom', label: '留作应急', icon: '备', note: '应付突然的一天', pocket: 'freedom' }
   ];
 
   /* ---------- 事件数据 ---------- */
@@ -260,47 +260,48 @@
 
 
   /* ---------- 每个日子的插画（内联 SVG，离线可用） ---------- */
-  var SCENES = {
-    'winter-home': '<svg viewBox="0 0 200 120"><rect x="0" y="84" width="200" height="36" fill="#eef2f4"/><path d="M0 88c30-8 62 5 92-1s60-8 108 3v30H0z" fill="#f7fafb"/><rect x="120" y="58" width="46" height="28" fill="#cfd8dd"/><path d="M114 58l29-18 29 18z" fill="#a9b8c0"/><rect x="137" y="68" width="12" height="18" fill="#f2c96b"/><rect x="22" y="52" width="72" height="18" rx="4" fill="#8fa6b3"/><rect x="28" y="56" width="10" height="10" fill="#fdf6ea"/><rect x="44" y="56" width="10" height="10" fill="#fdf6ea"/><rect x="60" y="56" width="10" height="10" fill="#fdf6ea"/><circle cx="20" cy="22" r="2" fill="#dbe6ea"/><circle cx="54" cy="14" r="1.6" fill="#dbe6ea"/><circle cx="90" cy="30" r="1.8" fill="#dbe6ea"/><circle cx="152" cy="18" r="2" fill="#dbe6ea"/></svg>',
+  /**
+   * 插画系统：不再是一张张卡通小图，而是细线几何母题。
+   * 每个事件按主题映射到一个母题，深色底 + 单色细线，克制、像杂志插页。
+   */
+  var MOTIFS = {
+    // 时间 / 圆环刻度
+    time: '<svg viewBox="0 0 200 130" fill="none"><circle cx="100" cy="65" r="42" stroke="#c9a227" stroke-width="1.1" opacity=".55"/><circle cx="100" cy="65" r="28" stroke="#ece3d4" stroke-width=".7" opacity=".22"/><path d="M100 23v10M100 97v10M58 65h10M132 65h10" stroke="#c9a227" stroke-width="1.1" opacity=".5"/><path d="M100 65V43" stroke="#ece3d4" stroke-width="1.2" opacity=".75"/><path d="M100 65l16 10" stroke="#ece3d4" stroke-width="1.2" opacity=".45"/><circle cx="100" cy="65" r="2.2" fill="#c9a227"/></svg>',
 
-    'lucky-money': '<svg viewBox="0 0 200 120"><rect x="62" y="26" width="76" height="74" rx="6" fill="#c0452f"/><rect x="62" y="54" width="76" height="14" fill="#e8b24a"/><circle cx="100" cy="61" r="9" fill="#f2d08a"/><path d="M96 61h8M100 57v8" stroke="#b8862b" stroke-width="2" stroke-linecap="round"/><path d="M22 18v26M22 26h10l-10 12h10" stroke="#e8b24a" stroke-width="2.5" fill="none" stroke-linecap="round"/><ellipse cx="27" cy="52" rx="7" ry="9" fill="#c0452f" opacity=".85"/><rect x="176" y="20" width="12" height="30" rx="3" fill="#e8b24a" opacity=".8"/></svg>',
+    // 学业 / 横线网格
+    study: '<svg viewBox="0 0 200 130" fill="none"><path d="M40 28h120M40 46h120M40 64h120M40 82h120M40 100h120" stroke="#ece3d4" stroke-width=".7" opacity=".22"/><path d="M58 20v92M100 20v92M142 20v92" stroke="#ece3d4" stroke-width=".7" opacity=".12"/><rect x="58" y="46" width="42" height="18" fill="#c9a227" opacity=".16"/><path d="M58 46h42" stroke="#c9a227" stroke-width="1.4"/><circle cx="142" cy="82" r="4" stroke="#c9a227" stroke-width="1.2"/></svg>',
 
-    'birthday': '<svg viewBox="0 0 200 120"><rect x="58" y="76" width="84" height="26" rx="4" fill="#e9c9a3"/><rect x="56" y="56" width="88" height="22" rx="4" fill="#d9a06a"/><path d="M64 78c0-8 6-14 12-14s12 6 12 14M100 78c0-8 6-14 12-14s12 6 12 14" fill="none" stroke="#b07a3f" stroke-width="2"/><rect x="80" y="38" width="4" height="18" fill="#c0452f"/><rect x="98" y="34" width="4" height="22" fill="#3f6f66"/><rect x="116" y="38" width="4" height="18" fill="#d79a3f"/><ellipse cx="82" cy="34" rx="3.5" ry="6" fill="#f2b04a"/><ellipse cx="100" cy="30" rx="3.5" ry="6" fill="#f2b04a"/><ellipse cx="118" cy="34" rx="3.5" ry="6" fill="#f2b04a"/><circle cx="40" cy="26" r="2" fill="#d98a6a"/><circle cx="162" cy="34" r="2.4" fill="#7fa8a0"/><circle cx="150" cy="18" r="1.6" fill="#d79a3f"/></svg>',
+    // 演出 / 声波
+    gig: '<svg viewBox="0 0 200 130" fill="none"><path d="M30 96V64M46 108V44M62 100V56M78 112V34M94 104V48M110 114V26M126 102V52M142 110V40M158 100V58M174 106V68" stroke="#c9a227" stroke-width="1.6" stroke-linecap="round" opacity=".72"/><path d="M24 118h152" stroke="#ece3d4" stroke-width=".8" opacity=".18"/></svg>',
 
-    'cet': '<svg viewBox="0 0 200 120"><rect x="44" y="20" width="86" height="76" rx="4" fill="#fdfaf3" stroke="#cbb497" stroke-width="2"/><path d="M56 34h62M56 44h62M56 54h48M56 64h56" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/><circle cx="150" cy="72" r="18" fill="#fdf6ea" stroke="#8aa39c" stroke-width="2.5"/><path d="M150 62v10l7 5" stroke="#3f6f66" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M132 30l12-8" stroke="#d79a3f" stroke-width="4" stroke-linecap="round"/></svg>',
+    // 旅行 / 山脊与水平线
+    travel: '<svg viewBox="0 0 200 130" fill="none"><path d="M14 96l38-46 26 28 22-34 30 40 26-20 30 32" stroke="#ece3d4" stroke-width="1.1" opacity=".5"/><path d="M14 96l38-46 26 28 22-34 30 40 26-20 30 32" stroke="#c9a227" stroke-width=".7" opacity=".35" transform="translate(0 10)"/><path d="M14 112h172" stroke="#ece3d4" stroke-width=".7" opacity=".15"/><circle cx="152" cy="34" r="9" stroke="#c9a227" stroke-width="1.1" opacity=".6"/></svg>',
 
-    'concert': '<svg viewBox="0 0 200 120"><rect x="0" y="86" width="200" height="34" fill="#2b2320"/><path d="M100 12l-26 74h52z" fill="#d79a3f" opacity=".28"/><path d="M56 16l14 70h-28z" fill="#7fa8a0" opacity=".25"/><path d="M144 16l-14 70h28z" fill="#d98a6a" opacity=".25"/><rect x="72" y="30" width="56" height="40" rx="3" fill="#201a17"/><circle cx="100" cy="50" r="7" fill="#f2c96b"/><circle cx="34" cy="96" r="7" fill="#1a1412"/><circle cx="58" cy="100" r="8" fill="#1a1412"/><circle cx="88" cy="98" r="7" fill="#1a1412"/><circle cx="118" cy="101" r="8" fill="#1a1412"/><circle cx="150" cy="97" r="7" fill="#1a1412"/><circle cx="174" cy="102" r="7" fill="#1a1412"/></svg>',
+    // 钱 / 折线
+    money: '<svg viewBox="0 0 200 130" fill="none"><path d="M20 104l30-14 26 8 28-30 24 10 30-40" stroke="#c9a227" stroke-width="1.5" stroke-linecap="round" opacity=".8"/><circle cx="20" cy="104" r="2.4" fill="#c9a227"/><circle cx="158" cy="38" r="2.4" fill="#c9a227"/><path d="M20 118h160" stroke="#ece3d4" stroke-width=".7" opacity=".15"/><path d="M20 118V22" stroke="#ece3d4" stroke-width=".7" opacity=".15"/></svg>',
 
-    'qingming': '<svg viewBox="0 0 200 120"><circle cx="156" cy="28" r="16" fill="#f2c96b" opacity=".9"/><path d="M0 92l40-38 30 22 26-28 34 30 30-18v40z" fill="#9fb8a4"/><path d="M0 100c40-10 80 6 120-2s60-6 80 4v18H0z" fill="#7fa890"/><path d="M96 120c-4-14 6-22 12-30" stroke="#fdf6ea" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+    // 关系 / 两条交汇的线
+    people: '<svg viewBox="0 0 200 130" fill="none"><circle cx="72" cy="52" r="13" stroke="#ece3d4" stroke-width="1.1" opacity=".55"/><circle cx="128" cy="52" r="13" stroke="#ece3d4" stroke-width="1.1" opacity=".35"/><path d="M48 102c0-15 11-26 24-26s24 11 24 26" stroke="#ece3d4" stroke-width="1.1" opacity=".45"/><path d="M104 102c0-15 11-26 24-26s24 11 24 26" stroke="#ece3d4" stroke-width="1.1" opacity=".28"/><path d="M86 52h28" stroke="#c9a227" stroke-width="1.2" stroke-dasharray="3 4" opacity=".7"/></svg>',
 
-    'labour': '<svg viewBox="0 0 200 120"><circle cx="46" cy="30" r="14" fill="#f2c96b"/><path d="M0 90l46-34 32 24 30-30 44 34 48-20v36H0z" fill="#a8bfae"/><path d="M0 100c44-8 82 8 124 0s52-4 76 6v14H0z" fill="#89ab95"/><rect x="120" y="94" width="34" height="18" rx="2" fill="#e8d5b8"/><path d="M120 94l17-12 17 12z" fill="#d79a3f"/></svg>',
-
-    'final': '<svg viewBox="0 0 200 120"><rect x="20" y="14" width="60" height="44" rx="3" fill="#2b3440"/><circle cx="72" cy="26" r="0" fill="#f2c96b"/><path d="M34 34c4-4 8 4 12 0s8 4 12 0" stroke="#5b6b7a" stroke-width="1.5" fill="none"/><rect x="26" y="66" width="104" height="10" rx="2" fill="#d9c9b3"/><rect x="34" y="44" width="60" height="22" rx="2" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M44 52h40M44 58h28" stroke="#cbb497" stroke-width="1.6" stroke-linecap="round"/><path d="M150 30v46" stroke="#4a4038" stroke-width="3" stroke-linecap="round"/><path d="M150 30l22-8v18l-22 8z" fill="#d79a3f"/><ellipse cx="150" cy="84" rx="16" ry="5" fill="#f2c96b" opacity=".55"/><rect x="138" y="84" width="24" height="6" rx="2" fill="#8a6a4a"/></svg>',
-
-    'graduation': '<svg viewBox="0 0 200 120"><path d="M56 44l44-18 44 18-44 18z" fill="#2f3a46"/><path d="M74 52v20c0 6 12 10 26 10s26-4 26-10V52" fill="none" stroke="#2f3a46" stroke-width="5"/><path d="M144 44v22" stroke="#d79a3f" stroke-width="2.5" stroke-linecap="round"/><circle cx="144" cy="70" r="4" fill="#d79a3f"/><rect x="58" y="92" width="84" height="10" rx="2" fill="#e8d5b8"/><path d="M58 92h84" stroke="#cbb497" stroke-width="2"/></svg>',
-
-    'summer': '<svg viewBox="0 0 200 120"><circle cx="160" cy="26" r="16" fill="#f2c96b"/><rect x="52" y="40" width="62" height="58" rx="6" fill="#d9a06a"/><rect x="52" y="58" width="62" height="8" fill="#b07a3f"/><path d="M76 40V22h14v18" fill="none" stroke="#b07a3f" stroke-width="4"/><rect x="132" y="52" width="44" height="30" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M140 62h28M140 70h20" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/><path d="M24 96c18-8 36 4 54-2" stroke="#7fa8a0" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
-
-    'intern': '<svg viewBox="0 0 200 120"><rect x="46" y="44" width="86" height="52" rx="4" fill="#3b4754"/><rect x="54" y="52" width="70" height="36" rx="2" fill="#8fb3c9"/><rect x="36" y="96" width="106" height="8" rx="3" fill="#2b3440"/><rect x="146" y="36" width="30" height="42" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><rect x="152" y="44" width="18" height="14" rx="1" fill="#d98a6a"/><path d="M152 66h18M152 72h10" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/></svg>',
-
-    'newterm': '<svg viewBox="0 0 200 120"><rect x="56" y="20" width="88" height="66" rx="3" fill="#e8d5b8"/><path d="M56 20l44-10 44 10" fill="none" stroke="#b07a3f" stroke-width="3"/><rect x="72" y="34" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="96" y="34" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="120" y="34" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="72" y="58" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="96" y="58" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="120" y="58" width="16" height="16" rx="1" fill="#c9dbe6"/><rect x="30" y="70" width="30" height="30" rx="6" fill="#3f6f66"/><path d="M38 70v-8a7 7 0 0 1 14 0v8" fill="none" stroke="#3f6f66" stroke-width="3"/></svg>',
-
-    'newterm2': '<svg viewBox="0 0 200 120"><rect x="56" y="20" width="88" height="66" rx="3" fill="#e8d5b8"/><path d="M56 20l44-10 44 10" fill="none" stroke="#b07a3f" stroke-width="3"/><rect x="72" y="34" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="96" y="34" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="120" y="34" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="72" y="58" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="96" y="58" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="120" y="58" width="16" height="16" rx="1" fill="#e6cdb2"/><rect x="30" y="70" width="30" height="30" rx="6" fill="#d98a6a"/><path d="M38 70v-8a7 7 0 0 1 14 0v8" fill="none" stroke="#d98a6a" stroke-width="3"/></svg>',
-
-    'autumn': '<svg viewBox="0 0 200 120"><circle cx="152" cy="26" r="14" fill="#f2c96b" opacity=".85"/><path d="M0 92l38-32 30 20 26-26 32 28 28-16 46 26v28H0z" fill="#c98a5a"/><path d="M0 102c40-8 78 6 118-2s56-4 82 6v14H0z" fill="#b06a3c"/><path d="M96 62c-10-6-20-2-24 6 8 6 18 4 24-6z" fill="#bf5a2c"/><path d="M96 62c8-8 18-8 24-2-4 10-14 12-24 2z" fill="#d79a3f"/><path d="M96 62v18" stroke="#8a4a1c" stroke-width="2" stroke-linecap="round"/></svg>',
-
-    'double11': '<svg viewBox="0 0 200 120"><path d="M40 34h14l10 48h66l12-36H60" fill="none" stroke="#4a4038" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="76" cy="94" r="6" fill="#4a4038"/><circle cx="118" cy="94" r="6" fill="#4a4038"/><rect x="112" y="10" width="34" height="54" rx="4" fill="#2f3a46"/><rect x="117" y="16" width="24" height="42" rx="2" fill="#c9dbe6"/><path d="M126 24h6v8h-6z" fill="#d98a6a"/><path d="M120 40h18M120 46h12" stroke="#8fa6b3" stroke-width="1.6" stroke-linecap="round"/><path d="M154 26l10-6M154 34h12M154 42l10 6" stroke="#d79a3f" stroke-width="2.5" stroke-linecap="round"/></svg>',
-
-    'newyear': '<svg viewBox="0 0 200 120"><rect x="0" y="96" width="200" height="24" fill="#2b2320"/><rect x="16" y="70" width="16" height="26" fill="#3b3330"/><rect x="38" y="58" width="20" height="38" fill="#3b3330"/><rect x="64" y="74" width="14" height="22" fill="#3b3330"/><rect x="84" y="50" width="22" height="46" fill="#3b3330"/><rect x="112" y="66" width="18" height="30" fill="#3b3330"/><rect x="136" y="56" width="16" height="40" fill="#3b3330"/><rect x="158" y="72" width="18" height="24" fill="#3b3330"/><g stroke-linecap="round"><path d="M60 18v-8M60 26v8M48 22h-8M72 22h8M52 14l-5-5M68 14l5-5" stroke="#f2c96b" stroke-width="2"/><path d="M136 30v-7M136 38v7M126 34h-7M146 34h7" stroke="#d98a6a" stroke-width="2"/></g><circle cx="60" cy="22" r="3" fill="#fdf6ea"/><circle cx="136" cy="34" r="2.5" fill="#fdf6ea"/></svg>',
-
-    'kaoyan': '<svg viewBox="0 0 200 120"><rect x="46" y="76" width="76" height="14" rx="2" fill="#8a6a4a"/><rect x="52" y="62" width="64" height="14" rx="2" fill="#3f6f66"/><rect x="48" y="48" width="72" height="14" rx="2" fill="#d98a6a"/><path d="M150 24v52" stroke="#4a4038" stroke-width="3" stroke-linecap="round"/><path d="M150 24l18-6v14l-18 6z" fill="#d79a3f"/><ellipse cx="150" cy="82" rx="15" ry="5" fill="#f2c96b" opacity=".5"/><rect x="28" y="30" width="34" height="34" rx="3" fill="#fdf6ea" stroke="#cbb497" stroke-width="2"/><path d="M34 40h22M34 48h22M34 56h14" stroke="#cbb497" stroke-width="2" stroke-linecap="round"/></svg>',
-
-    'fu-phone': '<svg viewBox="0 0 200 120"><rect x="74" y="18" width="52" height="84" rx="8" fill="#2b2320"/><rect x="80" y="26" width="40" height="64" rx="3" fill="#7fa8a0"/><circle cx="100" cy="96" r="3" fill="#f2c96b"/><path d="M132 70c14 0 22 8 22 18" stroke="#d0a97e" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M30 60c8-6 18-6 26 0" stroke="#c9b79b" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>',
-
-    'fu-weak': '<svg viewBox="0 0 200 120"><rect x="88" y="22" width="10" height="54" rx="5" fill="#dfe7ea" stroke="#9fb4bc" stroke-width="2"/><rect x="90" y="48" width="6" height="30" rx="3" fill="#d98a6a"/><circle cx="93" cy="84" r="12" fill="#d98a6a"/><circle cx="93" cy="84" r="6" fill="#fdf6ea"/><path d="M118 40h44M118 54h34M118 68h40" stroke="#c9b79b" stroke-width="3" stroke-linecap="round"/><path d="M38 92c6-10 14-10 20 0" stroke="#9fb8a4" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
-
-    'fu-delay': '<svg viewBox="0 0 200 120"><rect x="46" y="16" width="92" height="88" rx="4" fill="#fdfaf3" stroke="#cbb497" stroke-width="2"/><path d="M60 36h64M60 50h64M60 64h40" stroke="#cbb497" stroke-width="2.5" stroke-linecap="round"/><circle cx="146" cy="86" r="18" fill="#c0452f" opacity=".18"/><circle cx="146" cy="86" r="18" fill="none" stroke="#c0452f" stroke-width="2.5"/><path d="M140 86l5 5 9-10" stroke="#c0452f" stroke-width="3" fill="none" stroke-linecap="round"/></svg>'
+    // 健康 / 心电图
+    health: '<svg viewBox="0 0 200 130" fill="none"><path d="M18 70h34l10-22 12 44 12-34 10 12h86" stroke="#c9a227" stroke-width="1.4" stroke-linejoin="round" opacity=".75"/><path d="M18 70h34l10-22 12 44 12-34 10 12h86" stroke="#c9a227" stroke-width=".8" opacity=".2" transform="translate(0 18)"/></svg>'
   };
+
+  // 事件主题 → 母题
+  var SCENE_MOTIF = {
+    'winter-home': 'travel', 'lucky-money': 'money', 'newterm': 'study', 'newterm2': 'study',
+    'final': 'study', 'scholar': 'study', 'kaoyan': 'study', 'cet': 'study',
+    'qingming': 'travel', 'labour': 'travel', 'autumn': 'travel', 'graduation': 'travel',
+    'summer': 'travel', 'intern': 'money', 'double11': 'money', 'club': 'people',
+    'newyear': 'time', 'birthday': 'people', 'concert': 'gig', 'dorm': 'people',
+    'dating': 'people', 'callback-home': 'time',
+    'fu-phone': 'people', 'fu-weak': 'health', 'fu-delay': 'study'
+  };
+
+  function sceneSVG(key) {
+    return MOTIFS[SCENE_MOTIF[key] || 'time'] || MOTIFS.time;
+  }
+
 
   /**
    * 意外事件：不再"每年掷一次抽哪个"，而是挂在具体场景上，
@@ -316,7 +317,7 @@
 
   var ACCIDENTS = {
     phone: {
-      key: 'phone', name: '手机被偷', emoji: '📱',
+      key: 'phone', name: '手机被偷', 
       text: '散场的人潮把你往外推。你再摸口袋，空了。',
       options: [
         { key: 'new', label: '买台新的', sub: '2,500 元 · 应急金见底', cost: 2500, pocket: 'freedom', memory: '手机被偷，换了新的' },
@@ -325,7 +326,7 @@
       ]
     },
     fraud: {
-      key: 'fraud', name: '电信诈骗', emoji: '⚠️',
+      key: 'fraud', name: '电信诈骗', 
       text: '“同学，刷单返利，一天三百。”你垫了 300，对方说再补 1,200 就能连本带利提现。',
       options: [
         { key: 'report', label: '立刻报警、冻结账户', sub: '损失 300 元 · 止住', cost: 300, pocket: 'freedom', memory: '被刷单诈骗 300' },
@@ -334,7 +335,7 @@
       ]
     },
     fail: {
-      key: 'fail', name: '挂科重修', emoji: '📉',
+      key: 'fail', name: '挂科重修', 
       text: '成绩出来了。那门课挂了，补考也没过。教务系统里多了一行“重修”。',
       options: [
         { key: 'retake', label: '交钱重修', sub: '400 元 · 下学期重来', cost: 400, pocket: 'skill', memory: '挂了一门课，交钱重修' },
@@ -343,7 +344,7 @@
       ]
     },
     illness: {
-      key: 'illness', name: '生病住院', emoji: '🏥',
+      key: 'illness', name: '生病住院', 
       text: '换季那阵子，你的扁桃体先投降了。校医院说最好住院观察两天。',
       options: [
         { key: 'hospital', label: '住院两天', sub: '1,200 元 · 医保报销后自付', cost: 1200, pocket: 'freedom', memory: '住院两天' },
@@ -987,7 +988,7 @@
       $('#specialText').textContent = ev.title + '：' + ev.text;
       // 每个日子配一张内联 SVG 插画（离线可用）
       var sceneEl = $('#specialScene');
-      sceneEl.innerHTML = SCENES[ev.scene || ev.key] || '';
+      sceneEl.innerHTML = sceneSVG(ev.key);
       evBody.innerHTML = '';
 
       var chosenOpt = (ev.options || []).filter(function (o) { return o.key === (decided && decided.eventChoice); })[0];
@@ -2342,7 +2343,7 @@
       html += '<div class="rel-row"><span>' + name + ' · ' + mood + '</span><b>' + v.toFixed(1) + '</b></div>';
     });
     if (romance) {
-      html += '<div class="rel-row"><span>💗 和阿青在一起（第 ' + romance.year + ' 年 ' + romance.month + ' 月起）</span><b>恋爱中</b></div>';
+      html += '<div class="rel-row"><span>阿青 · 恋爱中（第 ' + romance.year + ' 年 ' + romance.month + ' 月起）</span><b>恋爱中</b></div>';
     }
     list.innerHTML = html;
   }
@@ -2355,7 +2356,7 @@
     strip.innerHTML = STAT_KEYS.map(function (k) {
       var v = s[k];
       var cls = v >= 7 ? ' is-high' : (v <= 2 ? ' is-low' : '');
-      return '<span class="stat-chip' + cls + '">' + STAT_ICONS[k] + ' ' + STAT_NAMES[k] +
+      return '<span class="stat-chip' + cls + '">' + STAT_MARKS[k] + ' · ' + STAT_NAMES[k] +
         ' <b>' + v.toFixed(1) + '</b></span>';
     }).join('');
   }
@@ -2433,7 +2434,7 @@
     body.innerHTML = lines.join('') || '<div class="log-line"><span>这个月没有特别的事</span><b>—</b></div>';
   }
 
-  var POCKET_ICONS = { money: '💰', skill: '📚', memory: '🎒', relation: '🍲', freedom: '🛟' };
+  var POCKET_ICONS = { money: '存', skill: '学', memory: '历', relation: '人', freedom: '备' };
   var POCKET_NOTES = {
     money: '存下来的钱',
     skill: '书 / 课 / 证 / 考研',
@@ -2688,10 +2689,10 @@
       } else {
         var row = document.createElement('div');
         row.className = 'recap-item ' + item.kind;
-        var icon = item.kind === 'trip' ? '🎒'
+        var icon = item.kind === 'trip' ? '行'
           : item.kind === 'accident' ? '⚠️'
-            : item.kind === 'romance' ? '💗'
-              : item.kind === 'skip' ? '🚫' : '✅';
+            : item.kind === 'romance' ? '心'
+              : item.kind === 'skip' ? '舍' : '择';
         var label = item.kind === 'skip' ? item.text + '（你放弃了）' : item.text;
         var amt = item.amt ? (item.amt > 0 ? '+' : '−') + fmtMoney(Math.abs(item.amt)) : '';
         row.innerHTML = '<span>' + icon + ' ' + label + '</span><span class="r-amt">' + amt + '</span>';
@@ -2867,6 +2868,66 @@
 
   /* ---------- 结局三线 ---------- */
 
+  /* ---------- 结局接入状态：七年之后你成了谁 ---------- */
+
+  /**
+   * 根据最后的状态层 + 意外标记，算出"人生走向"。
+   * 这是让前面 84 次选择真正有意义的地方：钱只是结果之一，状态决定你去哪。
+   */
+  function lifePath() {
+    var s = state.near.stats || blankStats();
+    var n = state.near;
+    var flags = n.flags || {};
+
+    if (flags.delay) {
+      return {
+        tag: '延期毕业',
+        title: '你比同届晚了半年才拿到毕业证',
+        text: '那门课一直拖着没修。七年的账本最后少了一个月，但账面上看不出来。'
+      };
+    }
+    if (s.study >= 8) {
+      return {
+        tag: '保研',
+        title: '你去了另一座城市读研',
+        text: '成绩一直排在前面。毕业那天，导师问你愿不愿意直博，你想了想，说再读三年吧。'
+      };
+    }
+    if (s.study >= 6.5) {
+      return {
+        tag: '考研上岸',
+        title: '你把那半年交给了图书馆',
+        text: '初试过了，复试也过了。录取通知来的时候，你在出租屋里自己煮了碗面。'
+      };
+    }
+    if (s.exp >= 7) {
+      return {
+        tag: '直接工作',
+        title: '你没再读书，直接进了社会',
+        text: '简历上写满了去过的地方、做过的事。面试官说，你比同龄人更知道钱难挣。'
+      };
+    }
+    if (s.body <= 2) {
+      return {
+        tag: '身体先亮了红灯',
+        title: '你在毕业前住了一次院',
+        text: '那些通宵、那些硬扛，最后都记在了体检报告上。钱还在，身体先欠了账。'
+      };
+    }
+    if (s.social >= 7.5) {
+      return {
+        tag: '人脉很厚',
+        title: '毕业时有一群人送你',
+        text: '你不太会存钱，但谁有事都会想到你。很多年后你才发现，这也是一种资产。'
+      };
+    }
+    return {
+      tag: '普通地毕业',
+      title: '你和大多数同学一样，按时毕业',
+      text: '没有特别高的成绩，也没有特别糟的运气。这已经比很多人好。'
+    };
+  }
+
   function renderEnding() {
     var seed = state.near.money;
     var actual = farLineActual();
@@ -2893,6 +2954,21 @@
       $('#paceLine').hidden = false;
     } else {
       $('#paceLine').hidden = true;
+    }
+
+    // 人生走向：状态层决定你成了谁
+    var path = lifePath();
+    var pathCard = $('#lifeCard');
+    if (pathCard) {
+      pathCard.hidden = false;
+      $('#lifeTag').textContent = path.tag;
+      $('#lifeTitle').textContent = path.title;
+      $('#lifeText').textContent = path.text;
+      var s2 = state.near.stats || blankStats();
+      $('#lifeStats').textContent = '学业 ' + s2.study.toFixed(1) +
+        ' · 社交 ' + s2.social.toFixed(1) +
+        ' · 经历 ' + s2.exp.toFixed(1) +
+        ' · 身体 ' + s2.body.toFixed(1);
     }
   }
 
@@ -3077,7 +3153,7 @@
         video.appendChild(src);
         var actions = $('.actions');
         actions.parentNode.insertBefore(video, actions);
-        btn.textContent = '🎬 回顾视频已生成（接入 AI 后可用）';
+        btn.textContent = '回顾视频已生成（接入 AI 后可用）';
       }
       btn.disabled = false;
     }, 2200);

@@ -22,24 +22,15 @@
     <p class="cover-badge">AI 创客大赛 · 数字内容与创意表达类</p>
     <div class="cover-art" aria-hidden="true">
       <svg viewBox="0 0 220 220" class="coin">
-        <defs>
-          <radialGradient id="sunG" cx="50%" cy="45%" r="60%">
-            <stop offset="0%" stop-color="#f2c57a"/>
-            <stop offset="70%" stop-color="#e2a355"/>
-            <stop offset="100%" stop-color="#cf8a3c"/>
-          </radialGradient>
-        </defs>
-        <circle cx="110" cy="110" r="74" fill="url(#sunG)"/>
-        <g class="rays" stroke="#cf8a3c" stroke-width="2" stroke-linecap="round" opacity=".55">
-          <path d="M110 12v16M110 192v16M12 110h16M192 110h16M41 41l11 11M168 168l11 11M179 41l-11 11M52 168l-11 11"/>
-        </g>
-        <circle cx="110" cy="110" r="52" fill="none" stroke="#a9672a" stroke-width="1.5" stroke-dasharray="3 5" opacity=".6"/>
-        <text x="110" y="132" text-anchor="middle" font-size="56" fill="#4a2a10" font-family="Songti SC, STSong, serif">¥</text>
-        <g class="sprout" stroke="#4a2a10" stroke-width="2.4" fill="none" stroke-linecap="round">
-          <path d="M110 172v-14"/>
-          <path d="M110 160c-10 0-16-6-16-13 8 0 16 5 16 13z" fill="#4a2a10" opacity=".75" stroke="none"/>
-          <path d="M110 158c9 0 15-6 15-12-8 0-15 5-15 12z" fill="#4a2a10" opacity=".5" stroke="none"/>
-        </g>
+        <circle cx="110" cy="110" r="88" fill="none" stroke="#2e2820" stroke-width="1"/>
+        <circle cx="110" cy="110" r="70" fill="none" stroke="#c9a227" stroke-width=".7" opacity=".45"/>
+        <path d="M110 14v16M110 190v16M14 110h16M190 110h16" stroke="#c9a227" stroke-width="1" opacity=".55"/>
+        <path d="M46 46l9 9M174 174l-9-9M174 46l-9 9M46 174l9-9" stroke="#c9a227" stroke-width=".8" opacity=".3"/>
+        <text x="110" y="124" text-anchor="middle" font-size="42" fill="#ece3d4"
+              font-family="Songti SC, STSong, serif" letter-spacing="3">¥1</text>
+        <path d="M76 142h68" stroke="#2e2820" stroke-width="1"/>
+        <text x="110" y="160" text-anchor="middle" font-size="8.5" fill="#857868"
+              font-family="PingFang SC, system-ui, sans-serif" letter-spacing="5">ONE YUAN</text>
       </svg>
     </div>
 
@@ -322,7 +313,7 @@
           </div>
           <div class="timeline-actions">
             <button class="btn btn-ghost btn-play" id="playBtn">▶ 一路看完</button>
-            <button class="btn btn-ghost btn-roll" id="rollBtn" hidden>🎲 重掷意外</button>
+            <button class="btn btn-ghost btn-roll" id="rollBtn" hidden>重掷意外</button>
             <button class="btn btn-ghost" id="resetMonthBtn" hidden>↺ 重来这一个月</button>
           </div>
         </div>
@@ -422,6 +413,13 @@
     <p class="fineprint" id="taxLine"></p>
     <p class="fineprint" id="paceLine" hidden></p>
 
+    <div class="life-card" id="lifeCard" hidden>
+      <span class="life-tag" id="lifeTag">—</span>
+      <p class="life-title" id="lifeTitle"></p>
+      <p class="life-text" id="lifeText"></p>
+      <p class="life-stats" id="lifeStats"></p>
+    </div>
+
     <button class="btn" data-go="report">生成我的纪念海报</button>
   </section>
 
@@ -434,7 +432,7 @@
     <p class="step-sub center" id="reportLine">这一张海报，是你刚才那几分钟留下的东西。</p>
     <div class="actions">
       <button class="btn" id="downloadBtn">保存海报（PNG）</button>
-      <button class="btn btn-ghost" id="videoBtn">🎬 生成 AI 回顾视频</button>
+      <button class="btn btn-ghost" id="videoBtn">生成回顾视频</button>
       <button class="btn btn-ghost" id="restartBtn">换一条路，再走一次</button>
     </div>
     <p class="fineprint" id="credits">AI 创客大赛 · 数字内容与创意表达类 · 互动叙事 demo</p>

@@ -1,16 +1,16 @@
 /* 一块钱的两万种人生 —— 视觉语言：纸张、暖光、手绘感、宋体 */
 :root {
-  --paper: #f6efe2;
-  --paper-2: #efe4d2;
-  --card: #fffaf1;
-  --ink: #241f1b;
-  --ink-soft: #6b5f54;
-  --line: #d9c9b3;
-  --warm: #bf5a2c;
-  --gold: #d79a3f;
-  --jade: #3f6f66;
-  --night: #1b1512;
-  --radius: 18px;
+  --paper: #100e0c;
+  --paper-2: #16130f;
+  --card: #191512;
+  --ink: #ece3d4;
+  --ink-soft: #9d9081;
+  --line: #2e2820;
+  --warm: #d98a4a;
+  --gold: #c9a227;
+  --jade: #7fa89a;
+  --night: #0a0907;
+  --radius: 5px;
 }
 
 * { box-sizing: border-box; }
@@ -22,10 +22,11 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   color: var(--ink);
+  background-color: var(--paper);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   line-height: 1.62;
   background:
-    radial-gradient(120% 78% at 50% -10%, #fdf8ef 0%, #f3e9d8 52%, #e7dac3 100%);
+    radial-gradient(120% 80% at 50% -12%, #1a1612 0%, #100e0c 50%, #080706 100%);
   background-attachment: fixed;
 }
 
@@ -39,6 +40,20 @@ body {
   margin: 0 auto;
 }
 
+/* 暗角 + 细颗粒：深度感，去掉扁平幼稚 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 95% at 50% -5%, transparent 42%, rgba(0, 0, 0, .55) 100%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .012) 0 1px, transparent 1px 3px);
+}
+
+#app { z-index: 2; }
+
 /* 顶部进度线 */
 .bar {
   position: fixed;
@@ -49,7 +64,7 @@ body {
   max-width: 480px;
   height: 2px;
   transform: translateX(-50%);
-  background: rgba(120, 96, 70, .12);
+  background: rgba(236, 227, 212, .08);
 }
 .bar i {
   display: block;
@@ -89,7 +104,7 @@ body {
   margin: 0;
   font-size: 11.5px;
   letter-spacing: .16em;
-  color: #9a8b78;
+  color: #857868;
   text-align: center;
 }
 .cover-art { display: flex; justify-content: center; margin: 4px 0 2px; }
@@ -180,7 +195,7 @@ body {
   border: 0;
   border-radius: 999px;
   background: var(--ink);
-  color: #fbf5e9;
+  color: #0f0d0b;
   font-family: inherit;
   font-size: 16.5px;
   font-weight: 600;
@@ -266,7 +281,7 @@ input:focus-visible {
 .chip.is-on {
   background: var(--ink);
   border-color: var(--ink);
-  color: #fbf5e9;
+  color: #0f0d0b;
   font-weight: 600;
 }
 .chips-compact { gap: 6px; }
@@ -302,7 +317,7 @@ input:focus-visible {
 }
 .mode-item.is-on {
   background: var(--ink);
-  color: #fbf5e9;
+  color: #0f0d0b;
 }
 
 /* 月度决策 */
@@ -336,8 +351,8 @@ input:focus-visible {
   color: var(--ink-soft);
 }
 .income-row b { color: var(--ink); font-variant-numeric: tabular-nums; }
-.income-row.muted { color: #9a8b78; }
-.income-row.muted b { color: #9a8b78; font-weight: 500; }
+.income-row.muted { color: #857868; }
+.income-row.muted b { color: #857868; font-weight: 500; }
 .income-row.total {
   padding-top: 8px;
   border-top: 1px dashed var(--line);
@@ -348,9 +363,9 @@ input:focus-visible {
 
 .special {
   padding: 13px 15px;
-  border: 1px solid #e4c9a8;
+  border: 1px solid #3a3025;
   border-radius: 14px;
-  background: #fff6e8;
+  background: #1f1a15;
   margin-bottom: 12px;
 }
 .special-tag {
@@ -358,11 +373,11 @@ input:focus-visible {
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--warm);
-  color: #fff8ef;
+  color: #12100d;
   font-size: 11px;
   margin-bottom: 7px;
 }
-.special-text { margin: 0 0 8px; font-size: 13.5px; line-height: 1.6; color: #4a4038; }
+.special-text { margin: 0 0 8px; font-size: 13.5px; line-height: 1.6; color: #d3c8b9; }
 .special-body { display: flex; flex-direction: column; gap: 7px; }
 .special-done { margin: 0; font-size: 13px; color: var(--jade); }
 .mini-btn {
@@ -380,9 +395,9 @@ input:focus-visible {
   gap: 2px;
 }
 .mini-btn:hover { border-color: #c3a985; transform: translateY(-1px); }
-.mini-btn.yes { border-color: #d9a06a; background: #fff2e2; color: #8a4a1c; font-weight: 600; }
+.mini-btn.yes { border-color: #8a6a44; background: #2a211a; color: #d7a06a; font-weight: 600; }
 .mini-btn.no { color: var(--ink-soft); }
-.mini-btn small { font-size: 11.5px; color: #9a8b78; }
+.mini-btn small { font-size: 11.5px; color: #857868; }
 .mini-btn.unaffordable { opacity: .55; }
 
 .decide-title {
@@ -428,13 +443,13 @@ input:focus-visible {
   justify-content: space-between;
   gap: 10px;
   font-size: 13px;
-  color: #4a4038;
+  color: #d3c8b9;
 }
-.log-line small { color: #9a8b78; font-size: 11.5px; }
+.log-line small { color: #857868; font-size: 11.5px; }
 .log-line b { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .log-line.gain b { color: var(--jade); }
 .log-line.spend b { color: var(--warm); }
-.log-line.accident b { color: #b3402c; }
+.log-line.accident b { color: #d97a68; }
 
 .timeline-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 
@@ -443,16 +458,16 @@ body {
   transition: background .8s ease;
 }
 body[data-season="spring"] {
-  background: radial-gradient(120% 78% at 50% -10%, #fdfbf2 0%, #f2ecdd 45%, #e4e8d4 100%);
+  background: radial-gradient(120% 78% at 50% -10%, #12100d 0%, #100e0c 45%, #0e1210 100%);
 }
 body[data-season="summer"] {
-  background: radial-gradient(120% 78% at 50% -10%, #fffdf0 0%, #f7efd4 45%, #e8e2bd 100%);
+  background: radial-gradient(120% 78% at 50% -10%, #13110c 0%, #12100b 45%, #100e09 100%);
 }
 body[data-season="autumn"] {
-  background: radial-gradient(120% 78% at 50% -10%, #fdf6ea 0%, #f3e6d2 45%, #e9d5bb 100%);
+  background: radial-gradient(120% 78% at 50% -10%, #1e1a15 0%, #12100c 45%, #100d0a 100%);
 }
 body[data-season="winter"] {
-  background: radial-gradient(120% 78% at 50% -10%, #fbfcfd 0%, #f0f2f4 45%, #e2e8ec 100%);
+  background: radial-gradient(120% 78% at 50% -10%, #0d1113 0%, #0f1315 45%, #0b0e10 100%);
 }
 
 /* 每个日子的插画 */
@@ -491,13 +506,13 @@ body[data-season="winter"] {
   cursor: pointer;
   transition: background .2s ease, color .2s ease;
 }
-.pace-item.is-on { background: var(--warm); color: #fff8ef; }
+.pace-item.is-on { background: var(--warm); color: #12100d; }
 
 .plan-card, .year-settle {
   padding: 14px 15px;
-  border: 1px solid #e4c9a8;
+  border: 1px solid #3a3025;
   border-radius: 14px;
-  background: #fff8ec;
+  background: #221c16;
   margin-bottom: 12px;
 }
 .plan-title, .settle-title {
@@ -522,7 +537,7 @@ body[data-season="winter"] {
   transition: all .16s ease;
 }
 .plan-item:hover { border-color: #c3a985; transform: translateY(-1px); }
-.plan-item.is-on { border-color: var(--warm); background: #fff2e2; }
+.plan-item.is-on { border-color: var(--warm); background: #2a211a; }
 .plan-icon { font-size: 19px; }
 .plan-body { display: flex; flex-direction: column; gap: 2px; }
 .plan-body b { font-size: 14.5px; }
@@ -534,7 +549,7 @@ body[data-season="winter"] {
 .settle-quote {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #6b5f54;
+  color: #9d9081;
   line-height: 1.6;
   padding-top: 8px;
   border-top: 1px dashed var(--line);
@@ -562,7 +577,7 @@ body[data-season="winter"] {
   transition: all .18s ease;
 }
 .icon-btn:hover { border-color: #c3a985; color: var(--ink); }
-.icon-btn.is-on { background: var(--warm); border-color: var(--warm); color: #fff8ef; }
+.icon-btn.is-on { background: var(--warm); border-color: var(--warm); color: #12100d; }
 
 .month-bar {
   display: flex;
@@ -586,7 +601,7 @@ body[data-season="winter"] {
   flex: 1;
   height: 7px;
   border-radius: 3px;
-  background: #e3d5c1;
+  background: #2b241d;
   transition: background .25s ease, transform .25s ease;
 }
 .year-cell.is-done { background: var(--gold); }
@@ -599,7 +614,7 @@ body[data-season="winter"] {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--card);
-  box-shadow: 0 10px 26px rgba(90, 64, 36, .08);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
   margin-bottom: 10px;
 }
 .month-card.flip-in { animation: cardIn .42s cubic-bezier(.2, .7, .3, 1); }
@@ -638,7 +653,7 @@ body[data-season="winter"] {
   padding-top: 10px;
   border-top: 1px dashed var(--line);
   font-size: 12.5px;
-  color: #9a8b78;
+  color: #857868;
   line-height: 1.6;
 }
 
@@ -670,7 +685,7 @@ body[data-season="winter"] {
   overflow: hidden;
   pointer-events: none;
 }
-.season-layer i {
+.season-layer i { opacity: .45;
   position: absolute;
   top: -8vh;
   left: var(--x);
@@ -685,10 +700,10 @@ body[data-season="winter"] {
   85% { opacity: .55; }
   100% { transform: translateY(112vh) rotate(420deg); opacity: 0; }
 }
-body[data-season="spring"] .season-layer i { background: #e9a8b8; border-radius: 60% 40% 55% 45%; }
-body[data-season="summer"] .season-layer i { background: #f0cf7a; border-radius: 50%; filter: blur(.4px); }
+body[data-season="spring"] .season-layer i { background: #6e4650; border-radius: 60% 40% 55% 45%; }
+body[data-season="summer"] .season-layer i { background: #7a6a34; border-radius: 50%; filter: blur(.4px); }
 body[data-season="autumn"] .season-layer i { background: #cf7a42; border-radius: 65% 35% 60% 40%; }
-body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius: 50%; }
+body[data-season="winter"] .season-layer i { background: #54636b; border-radius: 50%; }
 @media (prefers-reduced-motion: reduce) {
   .season-layer { display: none; }
 }
@@ -698,7 +713,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 .comp-hint {
   margin: 0 0 8px;
   font-size: 11.5px;
-  color: #9a8b78;
+  color: #857868;
 }
 .rel-row {
   display: flex;
@@ -726,7 +741,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   letter-spacing: .12em;
   color: var(--warm);
 }
-.arch-text { margin: 0 0 10px; font-size: 13.5px; line-height: 1.6; color: #4a4038; }
+.arch-text { margin: 0 0 10px; font-size: 13.5px; line-height: 1.6; color: #d3c8b9; }
 .arch-opts { display: flex; flex-direction: column; gap: 7px; }
 .arch-opt {
   display: flex;
@@ -735,23 +750,23 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 11px;
-  background: #fffdf8;
+  background: #1d1915;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
   transition: all .16s ease;
 }
 .arch-opt:hover { border-color: #c3a985; transform: translateY(-1px); }
-.arch-opt.is-on { border-color: var(--warm); background: #fff2e2; }
+.arch-opt.is-on { border-color: var(--warm); background: #2a211a; }
 .arch-opt b { font-size: 14px; }
 .arch-opt small { font-size: 11.5px; color: var(--ink-soft); }
 
 .archive-summary {
   margin-top: 14px;
   padding: 15px;
-  border: 1px solid #e4c9a8;
+  border: 1px solid #3a3025;
   border-radius: 16px;
-  background: #fff8ec;
+  background: #221c16;
   animation: drawerIn .3s ease;
 }
 .summary-title {
@@ -761,7 +776,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   margin-bottom: 9px;
 }
 .summary-body { display: flex; flex-direction: column; gap: 6px; }
-.sum-line { display: flex; justify-content: space-between; font-size: 13px; color: #4a4038; }
+.sum-line { display: flex; justify-content: space-between; font-size: 13px; color: #d3c8b9; }
 .sum-line b { font-variant-numeric: tabular-nums; }
 .sum-line.total {
   margin-top: 6px;
@@ -774,15 +789,15 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.6;
-  color: #8a7a66;
+  color: #8f8272;
 }
 
 /* 换挡 */
 .gear-card {
   padding: 13px 14px;
-  border: 1px solid #d9a06a;
+  border: 1px solid #8a6a44;
   border-radius: 14px;
-  background: #fff4e6;
+  background: #241d16;
   margin-bottom: 12px;
   animation: drawerIn .3s ease;
 }
@@ -792,24 +807,67 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   font-size: 16px;
   font-weight: 600;
 }
-.gear-text { margin: 0 0 7px; font-size: 13px; line-height: 1.6; color: #4a4038; }
+.gear-text { margin: 0 0 7px; font-size: 13px; line-height: 1.6; color: #d3c8b9; }
 .gear-rule {
   margin: 0 0 10px;
   font-size: 11.5px;
   line-height: 1.65;
-  color: #8a7a66;
+  color: #8f8272;
   padding: 8px 10px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, .55);
+  background: rgba(255, 255, 255, .04);
 }
 .gear-actions { display: flex; flex-direction: column; gap: 7px; }
 .gear-status {
   margin: 0 0 10px;
   padding: 8px 12px;
   border-radius: 10px;
-  background: #eef4f1;
+  background: #152421;
   font-size: 12.5px;
   color: var(--jade);
+}
+
+/* 结局 · 人生走向 */
+.life-card {
+  margin: 6px 0 4px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--gold);
+  border-radius: 3px;
+  background: rgba(201, 162, 39, .05);
+  text-align: left;
+}
+.life-tag {
+  display: inline-block;
+  margin-bottom: 7px;
+  padding: 2px 9px;
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  font-size: 10.5px;
+  letter-spacing: .18em;
+  color: var(--gold);
+}
+.life-title {
+  margin: 0 0 7px;
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.life-text {
+  margin: 0 0 9px;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--ink-soft);
+}
+.life-stats {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: #857868;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 状态层：学业/社交/经历/身体 */
@@ -827,16 +885,16 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   gap: 4px;
   padding: 3px 8px;
   border-radius: 9px;
-  background: #f3ece1;
+  background: #221d18;
   font-size: 11px;
-  color: #6b5c4b;
+  color: #a2957f;
 }
 .stat-chip b {
   font-variant-numeric: tabular-nums;
-  color: #4a4038;
+  color: #d3c8b9;
 }
-.stat-chip.is-high { background: #eef4f1; color: var(--jade); }
-.stat-chip.is-low { background: #fdeceb; color: #b3402c; }
+.stat-chip.is-high { background: #152421; color: var(--jade); }
+.stat-chip.is-low { background: #2a1a18; color: #d97a68; }
 
 /* 选项性质标签 */
 .opt-kind {
@@ -848,9 +906,9 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   font-weight: 500;
   vertical-align: 1px;
 }
-.opt-kind.save { background: #eef4f1; color: #3f6f66; }
-.opt-kind.invest { background: #eef1f8; color: #3f5f8f; }
-.opt-kind.relate { background: #fdf0e4; color: #a76a2c; }
+.opt-kind.save { background: #152421; color: #7fa89a; }
+.opt-kind.invest { background: #1a1f2c; color: #3f5f8f; }
+.opt-kind.relate { background: #261e14; color: #d1a06a; }
 
 /* 意外概率说明（封面） */
 .rules-card {
@@ -871,9 +929,9 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   margin: 0 0 10px;
   font-size: 12px;
   line-height: 1.7;
-  color: #6b5c4b;
+  color: #a2957f;
 }
-.rules-text b { color: #4a4038; }
+.rules-text b { color: #d3c8b9; }
 .prob-chart { display: flex; flex-direction: column; gap: 6px; }
 .prob-row {
   display: grid;
@@ -881,20 +939,20 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   align-items: center;
   gap: 8px;
   font-size: 11.5px;
-  color: #6b5c4b;
+  color: #a2957f;
 }
 .prob-row i {
   display: block;
   height: 7px;
   border-radius: 4px;
-  background: #ece0cf;
+  background: #2b241d;
   overflow: hidden;
 }
 .prob-row i b {
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, #d9a06a, #b5773c);
+  background: linear-gradient(90deg, #8a6a44, #b5773c);
   animation: probGrow .9s cubic-bezier(.2, .7, .3, 1) both;
 }
 .prob-row em {
@@ -908,7 +966,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   margin: 9px 0 0;
   font-size: 10.5px;
   line-height: 1.6;
-  color: #9a8b78;
+  color: #857868;
 }
 @keyframes probGrow { from { width: 0 !important; } }
 
@@ -916,9 +974,9 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 .accident {
   margin-top: 10px;
   padding: 13px 14px;
-  border: 1px solid #dfb9a8;
+  border: 1px solid #5a3a30;
   border-radius: 15px;
-  background: linear-gradient(180deg, #fff6f1, #fdf0e9);
+  background: linear-gradient(180deg, #241a16, #241a16);
   animation: drawerIn .32s ease;
 }
 .accident-head { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 7px; }
@@ -926,7 +984,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 .accident-tag {
   font-size: 10.5px;
   letter-spacing: .12em;
-  color: #b3402c;
+  color: #d97a68;
   font-weight: 600;
 }
 .accident-title {
@@ -934,13 +992,13 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   font-family: "Songti SC", "STSong", serif;
   font-size: 17px;
   font-weight: 600;
-  color: #7a2f20;
+  color: #dfa08a;
 }
 .accident-text {
   margin: 0 0 7px;
   font-size: 13px;
   line-height: 1.65;
-  color: #4a4038;
+  color: #d3c8b9;
 }
 .accident-prob {
   margin: 0 0 10px;
@@ -955,7 +1013,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--card);
-  box-shadow: 0 10px 26px rgba(90, 64, 36, .08);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
   margin-bottom: 12px;
 }
 .recap-head {
@@ -992,16 +1050,16 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   justify-content: space-between;
   gap: 10px;
   font-size: 13.5px;
-  color: #4a4038;
+  color: #d3c8b9;
   animation: recapIn .32s cubic-bezier(.2, .7, .3, 1);
 }
 .recap-item.dim { opacity: .38; }
 .recap-item .r-amt { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.recap-item.trip { color: #8a4a1c; font-weight: 600; }
+.recap-item.trip { color: #d7a06a; font-weight: 600; }
 .recap-item.trip .r-amt { color: var(--warm); }
-.recap-item.accident { color: #b3402c; font-weight: 600; }
-.recap-item.accident .r-amt { color: #b3402c; }
-.recap-item.skip { color: #9a8b78; }
+.recap-item.accident { color: #d97a68; font-weight: 600; }
+.recap-item.accident .r-amt { color: #d97a68; }
+.recap-item.skip { color: #857868; }
 .recap-item.romance { color: #b5476f; font-weight: 600; }
 .recap-item.spend .r-amt { color: var(--warm); }
 @keyframes recapIn {
@@ -1011,7 +1069,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 .recap-bar {
   height: 4px;
   border-radius: 2px;
-  background: #e3d5c1;
+  background: #2b241d;
   overflow: hidden;
   margin-bottom: 14px;
 }
@@ -1037,7 +1095,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 }
 .pocket-seg[data-name="钱"] { background: #c9a86a; }
 .pocket-seg[data-name="能力"] { background: #7fa8a0; }
-.pocket-seg[data-name="经历"] { background: #d98a6a; }
+.pocket-seg[data-name="经历"] { background: #8a5a3a; }
 .pocket-seg[data-name="关系"] { background: #b58cb0; }
 .pocket-seg[data-name="选择权"] { background: #8fa3c9; }
 
@@ -1100,7 +1158,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   width: 100%;
   height: 180px;
   border-radius: 16px;
-  background: #fffaf1;
+  background: #191512;
   border: 1px solid var(--line);
 }
 
@@ -1125,10 +1183,10 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 .card:hover {
   transform: translateY(-2px);
   border-color: #c3a985;
-  box-shadow: 0 12px 24px rgba(90, 64, 36, .1);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, .5);
 }
 .card:active { transform: translateY(0); }
-.card.is-picked { border-color: var(--warm); background: #fff5e9; }
+.card.is-picked { border-color: var(--warm); background: #241d16; }
 .card-icon {
   flex: 0 0 42px;
   display: grid;
@@ -1136,7 +1194,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: #f4e7d4;
+  background: #241d16;
   color: #8a5230;
 }
 .card-icon svg { width: 26px; height: 26px; }
@@ -1162,7 +1220,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 }
 .scene.is-on { opacity: 1; }
 
-.scene-plant .ground { fill: none; stroke: #cbb497; stroke-width: 3; stroke-linecap: round; }
+.scene-plant .ground { fill: none; stroke: #3a332a; stroke-width: 3; stroke-linecap: round; }
 .scene-plant .stem,
 .scene-plant .branch {
   fill: none;
@@ -1200,7 +1258,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
 }
 
 .scene-books .book {
-  fill: #e7d3b4;
+  fill: #2e2620;
   stroke: #b08b5e;
   stroke-width: 2;
   opacity: 0;
@@ -1253,7 +1311,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   margin: 0;
   font-size: 15px;
   line-height: 1.7;
-  color: #4a4038;
+  color: #d3c8b9;
 }
 
 /* 时间轴 */
@@ -1262,7 +1320,7 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #9a8b78;
+  color: #857868;
   padding: 0 2px;
 }
 .btn-play { margin-top: 8px; padding: 11px 18px; font-size: 14px; }
@@ -1279,7 +1337,7 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-runnable-track {
   height: 5px;
   border-radius: 3px;
-  background: linear-gradient(to right, var(--warm) 0%, var(--warm) var(--p, 0%), #e0d2bd var(--p, 0%), #e0d2bd 100%);
+  background: linear-gradient(to right, var(--warm) 0%, var(--warm) var(--p, 0%), #2b241d var(--p, 0%), #2b241d 100%);
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -1288,13 +1346,13 @@ input[type="range"]::-webkit-slider-thumb {
   margin-top: -9.5px;
   border: 3px solid var(--warm);
   border-radius: 50%;
-  background: #fffdf8;
+  background: #1d1915;
   box-shadow: 0 3px 8px rgba(90, 60, 30, .22);
 }
 input[type="range"]::-moz-range-track {
   height: 5px;
   border-radius: 3px;
-  background: #e0d2bd;
+  background: #2b241d;
 }
 input[type="range"]::-moz-range-progress {
   height: 5px;
@@ -1306,7 +1364,7 @@ input[type="range"]::-moz-range-thumb {
   height: 20px;
   border: 3px solid var(--warm);
   border-radius: 50%;
-  background: #fffdf8;
+  background: #1d1915;
 }
 
 /* 参数 */
@@ -1333,7 +1391,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .seg-item.is-on {
   background: var(--ink);
-  color: #fbf5e9;
+  color: #0f0d0b;
 }
 .switch {
   display: flex;
@@ -1348,7 +1406,7 @@ input[type="range"]::-moz-range-thumb {
   margin: 0;
   font-size: 11px;
   line-height: 1.65;
-  color: #9a8b78;
+  color: #857868;
 }
 
 /* 星图 */
@@ -1372,7 +1430,7 @@ input[type="range"]::-moz-range-thumb {
 .reveal-line {
   margin: 0;
   font-size: 15px;
-  color: #4a4038;
+  color: #d3c8b9;
   animation: lineIn .7s cubic-bezier(.22, .61, .36, 1) both;
 }
 .reveal-line.strong {

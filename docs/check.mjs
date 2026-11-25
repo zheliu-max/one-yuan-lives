@@ -52,12 +52,13 @@ for (const match of html.matchAll(/data-go="([^"]+)"/g)) {
 check('月度决策：五类去向齐全', ['money', 'skill', 'memory', 'relation', 'freedom'].every((k) => js.includes(`key: '${k}'`)))
 const poolCount = (js.match(/months: \[/g) || []).length
 check('事件池事件数 ≥ 18', poolCount >= 18, `实际 ${poolCount}`)
-const sceneBlock = (js.match(/var SCENES = \{([\s\S]*?)\n  \};/) || [])[1] || ''
-const sceneKeys = [...sceneBlock.matchAll(/'([a-z0-9-]+)':\s*'<svg/g)].map((m) => m[1])
+const sceneBlock = (js.match(/var MOTIFS = \{([\s\S]*?)\n  \};/) || [])[1] || ''
+const motifKeys = [...((js.match(/var SCENE_MOTIF = \{([\s\S]*?)\n  \};/) || [])[1] || '').matchAll(/'([a-z0-9-]+)':/g)].map((m) => m[1])
 const sceneRefs = [...new Set([...js.matchAll(/scene: '([a-z0-9-]+)'/g)].map((m) => m[1]))]
-const missingScenes = sceneRefs.filter((k) => !sceneKeys.includes(k))
-check('每个事件的插画都存在', missingScenes.length === 0, missingScenes.join(', '))
-check('生日也有插画', sceneKeys.includes('birthday'))
+const missingScenes = sceneRefs.filter((k) => !motifKeys.includes(k) && k !== 'birthday')
+check('插画母题系统存在', js.includes('var MOTIFS') && js.includes('function sceneSVG'))
+check('每个事件的插画母题都有映射', missingScenes.length === 0, missingScenes.join(', '))
+check('生日也有母题', motifKeys.includes('birthday'))
 for (const s of ['spring', 'summer', 'autumn', 'winter']) {
   check(`季节背景 ${s}`, css.includes(`data-season="${s}"`))
 }
@@ -142,6 +143,15 @@ check('有跨年回调事件', js.includes('neverHomeFor3Years') && js.includes(
 check('囤货会降低后续固定支出', js.includes('stockpileDiscount'))
 check('状态条 UI', html.includes('id="statStrip"') && css.includes('.stat-chip'))
 check('选项分类样式', css.includes('.opt-kind.save') && css.includes('.opt-kind.invest') && css.includes('.opt-kind.relate'))
+
+// v5：结局接入状态 + 深色编辑风视觉
+check('结局有人生走向卡', html.includes('id="lifeCard"') && css.includes('.life-card'))
+check('走向由状态决定', js.includes('function lifePath') && js.includes("s.study >= 8") && js.includes("flags.delay"))
+check('走向会显示最终状态', js.includes("'学业 ' + s2.study.toFixed(1)"))
+check('深色编辑风配色', css.includes('--paper: #100e0c') && css.includes('--ink: #ece3d4'))
+check('暗角与颗粒叠层', css.includes('body::after') && css.includes('repeating-linear-gradient'))
+check('插画改为细线母题', js.includes('var MOTIFS') && js.includes('var SCENE_MOTIF'))
+check('已移除卡通 emoji', !/[\u{1F300}-\u{1FAFF}]/u.test(html) && !/[\u{1F300}-\u{1FAFF}]/u.test(js))
 
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
