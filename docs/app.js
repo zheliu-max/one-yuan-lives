@@ -12,7 +12,7 @@
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
 
-  var SCREENS = ['cover', 'identity', 'setup', 'machine', 'replay', 'reveal', 'ending', 'report'];
+  var SCREENS = ['cover', 'identity', 'archive', 'setup', 'machine', 'replay', 'reveal', 'ending', 'report'];
   var INFLATION = 0.03;
   var NEAR_YEARS = 7;        // 近期：七年
   var NEAR_MONTHS = 84;      // 七年 × 12
@@ -28,6 +28,7 @@
     amount: 15,
     habit: 5,
     birthday: null,           // 生日月份 1-12
+    profile: null,            // 生活建档：早餐/午餐/晚餐/交通/社交
     pace: 'monthly',          // 'monthly' 逐月 | 'yearly' 学年方案
     autoPaused: false,        // 自动推进是否暂停
     timelineMode: 'near',     // 'near' | 'far'
@@ -124,9 +125,13 @@
     return state.budget;
   }
 
-  // 每月基础支出（吃饭/日用），约占生活费一半
-  function monthlyBase() {
-    return Math.round(state.budget * 0.55);
+  // 每月固定支出：按生活档案算，并允许真实波动（±8%）
+  function monthlyBase(monthIndex) {
+    var base = state.profile ? profileFixed() : Math.round(state.budget * 0.55);
+    if (typeof monthIndex !== 'number' || !state.profile) return base;
+    var rnd = monthRng(monthIndex);
+    var wave = 1 + (rnd() - 0.5) * 0.16;   // 0.92 ~ 1.08
+    return Math.round(base * wave / 10) * 10;
   }
 
   // 学年方案：定一次，之后每月自动按它分配闲钱
@@ -264,7 +269,7 @@
     var allowance = monthlyAllowance();
     n.cash += allowance;
     // 基础支出
-    n.cash -= monthlyBase();
+    n.cash -= monthlyBase(monthIndex);
     // 期末周这种月份额外花销
     var ev = eventFor(monthIndex);
 
@@ -368,7 +373,7 @@
   function monthFreeMoney(monthIndex) {
     var n = state.near;
     var allowance = monthlyAllowance();
-    var base = monthlyBase();
+    var base = monthlyBase(monthIndex);
     var extra = monthGain(monthIndex);
     var habitCut = state.amount * 30;
     return Math.max(0, allowance + extra - base - habitCut);
@@ -465,6 +470,8 @@
     var index = SCREENS.indexOf(name);
     $('#barFill').style.width = (index / (SCREENS.length - 1) * 100) + '%';
     window.scrollTo(0, 0);
+    if (name === 'archive') { renderArchive(); }
+    if (name === 'archive') { renderArchive(); }
     if (name === 'machine') { prepareMachine(); }
     if (name === 'replay') { playRecap(); }
     if (name === 'reveal') { drawStars(); }
@@ -528,7 +535,98 @@
       $$('.chip', this).forEach(function (c) { c.classList.toggle('is-on', c === chip); });
       update();
     });
-    $('#identityNext').addEventListener('click', function () { go('setup'); });
+    $('#identityNext').addEventListener('click', function () { go('archive'); });
+  }
+
+  /* ---------- 生活建档：界面 ---------- */
+
+  function renderArchive() {
+    var list = $('#archiveList');
+    if (!list) return;
+    if (!state.profile) state.profile = {};
+    var p = state.profile;
+    list.innerHTML = '';
+
+    ARCHIVE_QUESTIONS.forEach(function (q, i) {
+      var answered = typeof p[q.key] === 'number';
+      var locked = i > 0 && typeof p[ARCHIVE_QUESTIONS[i - 1].key] !== 'number';
+      var block = document.createElement('div');
+      block.className = 'arch-q' + (locked ? ' is-locked' : '');
+      block.setAttribute('data-q', q.key);
+      var opts = q.options.map(function (o) {
+        var on = answered && p[q.key] === o.v;
+        return '<button class="arch-opt' + (on ? ' is-on' : '') + '" data-aq="' + q.key + '" data-av="' + o.v + '">' +
+          '<b>' + o.label + '</b><small>' + o.sub + '</small></button>';
+      }).join('');
+      block.innerHTML = '<p class="arch-scene">' + q.scene + '</p>' +
+        '<p class="arch-text">' + q.text + '</p>' +
+        '<div class="arch-opts">' + opts + '</div>';
+      list.appendChild(block);
+    });
+
+    renderArchiveSummary();
+    $('#archiveNext').disabled = !profileAnswered();
+  }
+
+  function renderArchiveSummary() {
+    var box = $('#archiveSummary');
+    var body = $('#summaryBody');
+    if (!box || !body) return;
+    if (!profileAnswered()) { box.hidden = true; return; }
+    box.hidden = false;
+
+    var p = state.profile;
+    var meal = profileMeal();
+    var fixed = profileFixed();
+    var left = state.budget - fixed;
+    var frugal = profileFixedFrugal();
+    var fourYears = Math.max(0, left) * 48;
+
+    var lines = [
+      ['餐费（早 ' + p.breakfast + ' / 午 ' + p.lunch + ' / 晚 ' + p.dinner + ' 元）', fmtMoney(meal)],
+      ['交通', fmtMoney(p.transport)],
+      ['日用 + 通讯', fmtMoney(DAILY_COST + TELECOM_COST)],
+      ['社交', fmtMoney(p.social)]
+    ];
+    var html = lines.map(function (l) {
+      return '<div class="sum-line"><span>' + l[0] + '</span><b>' + l[1] + '</b></div>';
+    }).join('');
+    html += '<div class="sum-line total"><span>每月固定支出</span><b>' + fmtMoney(fixed) + '</b></div>';
+    html += '<div class="sum-line"><span>生活费 ' + fmtMoney(state.budget) + ' 扣完还剩</span><b>' + (left >= 0 ? '+' : '−') + fmtMoney(Math.abs(left)) + '</b></div>';
+
+    var note = left >= 0
+      ? '按这个过法，四年能攒下约 ' + fmtMoney(fourYears) + '。'
+      : '按这个过法，每个月要缺 ' + fmtMoney(-left) + '，得靠兼职或家里补。';
+    if (frugal < fixed) {
+      note += '<br>如果换成最省的过法（食堂 + 单车），每月能多攒 ' + fmtMoney(fixed - frugal) + '。';
+    }
+    html += '<p class="sum-note">' + note + '</p>';
+    body.innerHTML = html;
+  }
+
+  function answerArchive(key, value) {
+    if (!state.profile) state.profile = {};
+    state.profile[key] = value;
+    renderArchive();
+    // 自动滚到下一条
+    var idx = ARCHIVE_QUESTIONS.findIndex(function (q) { return q.key === key; });
+    var next = ARCHIVE_QUESTIONS[idx + 1];
+    if (next) {
+      var el = document.querySelector('[data-q="' + next.key + '"]');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function bindArchive() {
+    $('#archiveList').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-aq]');
+      if (!btn) return;
+      answerArchive(btn.getAttribute('data-aq'), Number(btn.getAttribute('data-av')));
+    });
+    $('#archiveNext').addEventListener('click', function () {
+      if (!profileAnswered()) return;
+      go('setup');
+    });
   }
 
   /* 输入 */
@@ -698,7 +796,8 @@
     } else {
       $('#incExtraRow').hidden = true;
     }
-    $('#incBase').textContent = '−' + fmtMoney(monthlyBase() + state.amount * 30);
+    $('#incBase').textContent = '−' + fmtMoney(monthlyBase(month));
+    $('#incHabit').textContent = '−' + fmtMoney(state.amount * 30);
     $('#incFree').textContent = fmtMoney(free);
 
     // 事件卡片
@@ -845,6 +944,7 @@
 
     renderPockets();
     renderRelations();
+    renderProfile();
     $('#narration').textContent = narrationNear(month, ev);
     $('#timeSlider').style.setProperty('--p', (month / (NEAR_MONTHS - 1) * 100) + '%');
 
@@ -1028,6 +1128,85 @@
       if (d.auto) auto++; else manual++;
     }
     return { auto: auto, manual: manual };
+  }
+
+  /* ---------- 生活建档：首月过一遍日子 ---------- */
+
+  // 固定项（不在建档里问，直接计入）
+  var DAILY_COST = 80;    // 洗护、纸巾、杂项
+  var TELECOM_COST = 39;  // 校园套餐
+
+  // 五个微场景：每项选出来的数字要么是"每天"，要么是"每月"
+  var ARCHIVE_QUESTIONS = [
+    {
+      key: 'breakfast', unit: 'day', scene: '第 1 天 · 早上',
+      text: '闹钟响了三次。你冲出宿舍，食堂已经排上了队。',
+      options: [
+        { v: 4, label: '食堂吃', sub: '一碗粥 + 一个包子，4 元' },
+        { v: 5, label: '路上买', sub: '包子豆浆，5 元' },
+        { v: 8, label: '点外卖', sub: '懒得动，8 元' }
+      ]
+    },
+    {
+      key: 'lunch', unit: 'day', scene: '第 3 天 · 中午',
+      text: '室友都在点外卖。食堂的队从二楼排到了一楼。',
+      options: [
+        { v: 12, label: '去食堂', sub: '一荤一素，12 元' },
+        { v: 18, label: '混着吃', sub: '食堂 + 偶尔外卖，18 元' },
+        { v: 25, label: '跟室友点外卖', sub: '25 元' }
+      ]
+    },
+    {
+      key: 'dinner', unit: 'day', scene: '第 5 天 · 晚上',
+      text: '晚自习结束，食堂快关门了。',
+      options: [
+        { v: 10, label: '食堂剩什么吃什么', sub: '10 元' },
+        { v: 15, label: '校门口小炒', sub: '15 元' },
+        { v: 22, label: '夜宵外卖', sub: '22 元' }
+      ]
+    },
+    {
+      key: 'transport', unit: 'month', scene: '第 6 天 · 出门',
+      text: '从宿舍到教学楼 1.8 公里。',
+      options: [
+        { v: 15, label: '共享单车月卡', sub: '15 元/月' },
+        { v: 60, label: '地铁 + 偶尔公交', sub: '60 元/月' },
+        { v: 150, label: '经常打车', sub: '150 元/月' }
+      ]
+    },
+    {
+      key: 'social', unit: 'month', scene: '第 7 天 · 周末',
+      text: '社团群里说这周末聚餐，AA 65。',
+      options: [
+        { v: 50, label: '很少出去', sub: '50 元/月' },
+        { v: 100, label: '偶尔聚聚', sub: '100 元/月' },
+        { v: 200, label: '局挺多', sub: '200 元/月' }
+      ]
+    }
+  ];
+
+  function profileAnswered() {
+    var p = state.profile;
+    if (!p) return false;
+    return ARCHIVE_QUESTIONS.every(function (q) { return typeof p[q.key] === 'number'; });
+  }
+
+  function profileMeal() {
+    var p = state.profile;
+    if (!p) return 0;
+    return ((p.breakfast || 0) + (p.lunch || 0) + (p.dinner || 0)) * 30;
+  }
+
+  /** 每月固定支出（不含波动）。 */
+  function profileFixed() {
+    var p = state.profile;
+    if (!p) return Math.round(state.budget * 0.55);
+    return profileMeal() + (p.transport || 0) + DAILY_COST + TELECOM_COST + (p.social || 0);
+  }
+
+  /** 同样的画像换成最省的一档，用来做对照。 */
+  function profileFixedFrugal() {
+    return (4 + 12 + 10) * 30 + 15 + DAILY_COST + TELECOM_COST + 50;
   }
 
   /* ---------- 事件引擎：按月份确定性生成 ---------- */
@@ -1364,6 +1543,26 @@
       html += '<div class="rel-row"><span>💗 和阿青在一起（第 ' + romance.year + ' 年 ' + romance.month + ' 月起）</span><b>恋爱中</b></div>';
     }
     list.innerHTML = html;
+  }
+
+  /** 生活档案（固定支出的来源）。 */
+  function renderProfile() {
+    var section = $('#profileSection');
+    var list = $('#profileList');
+    if (!section || !list) return;
+    var p = state.profile;
+    if (!p || !profileAnswered()) { section.hidden = true; return; }
+    section.hidden = false;
+    var rows = [
+      ['餐费', '早 ' + p.breakfast + ' / 午 ' + p.lunch + ' / 晚 ' + p.dinner + ' 元', profileMeal()],
+      ['交通', p.transport + ' 元/月', p.transport],
+      ['日用 + 通讯', DAILY_COST + ' + ' + TELECOM_COST, DAILY_COST + TELECOM_COST],
+      ['社交', p.social + ' 元/月', p.social]
+    ];
+    list.innerHTML = rows.map(function (r) {
+      return '<div class="rel-row"><span>' + r[0] + ' · ' + r[1] + '</span><b>' + fmtMoney(r[2]) + '</b></div>';
+    }).join('') +
+      '<div class="rel-row"><span>合计（每月会有 ±8% 波动）</span><b>' + fmtMoney(profileFixed()) + '</b></div>';
   }
 
   function renderPockets() {
@@ -2039,7 +2238,7 @@
   }
 
   function restart() {
-    state.grade = null; state.school = null; state.major = null; state.birthday = null;
+    state.grade = null; state.school = null; state.major = null; state.birthday = null; state.profile = null;
     state.budget = 1800; state.amount = 15; state.habit = 5;
     state.pace = 'monthly'; state.timelineMode = 'near'; state.slider = 0;
     state.rate = 0.08; state.inflation = false;
@@ -2250,6 +2449,7 @@
   }
 
   bindIdentity();
+  bindArchive();
   bindHabit();
   readInputs(true);
   bind();

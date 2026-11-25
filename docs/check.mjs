@@ -92,6 +92,14 @@ check('演唱会有抢票结果与黄牛', js.includes('scalper') && js.includes
 check('旅行可遇见人', js.includes('romance'))
 check('朋友生日影响关系值', js.includes('addRelation'))
 
+// v3.3：生活建档
+check('有生活建档屏', html.includes('data-screen="archive"'))
+check('有五道建档题', js.includes('ARCHIVE_QUESTIONS') && js.includes("key: 'breakfast'") && js.includes("key: 'social'"))
+check('固定支出按档案计算', js.includes('function profileFixed') && js.includes('profileFixed()'))
+check('每月有 ±8% 波动', js.includes('0.16') && js.includes('wave'))
+check('账本里有生活档案', html.includes('id="profileSection"'))
+check('不再用预算系数兜底做主路径', js.includes("state.budget * 0.55"))
+
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r
 const fvSingle = (p, r, n) => p * Math.pow(1 + r, n)

@@ -128,7 +128,23 @@
     <button class="btn" id="identityNext" disabled>继续</button>
   </section>
 
-  <!-- 第三幕 · 一笔钱 -->
+  <!-- 第三幕 · 生活建档 -->
+  <section class="screen" data-screen="archive">
+    <p class="kicker">开学第一周 · 建立你的开销档案</p>
+    <h2 class="step-title">先过一遍这一周，<br>让账本知道你怎么生活。</h2>
+    <p class="step-sub">你选的不只是价格，是一种过法。之后的每个月都会按它扣。</p>
+
+    <div class="archive-list" id="archiveList"></div>
+
+    <div class="archive-summary" id="archiveSummary" hidden>
+      <div class="summary-title">你的大学开销档案</div>
+      <div class="summary-body" id="summaryBody"></div>
+    </div>
+
+    <button class="btn" id="archiveNext" disabled>开始这七年</button>
+  </section>
+
+  <!-- 第四幕 · 一笔钱 -->
   <section class="screen" data-screen="setup">
     <p class="kicker" id="setupKicker">第一笔钱</p>
     <h2 class="step-title" id="setupTitle">你站在奶茶店门口，<br>手里攥着 <span class="hl" id="amountEcho">15</span> 元。</h2>
@@ -191,7 +207,10 @@
             <span id="incExtraLabel">额外收入</span><b id="incExtra">—</b>
           </div>
           <div class="income-row muted">
-            <span>固定支出</span><b id="incBase">—</b>
+            <span>固定支出（餐费/交通/日用/社交）</span><b id="incBase">—</b>
+          </div>
+          <div class="income-row muted">
+            <span>每天省下的（×30 进钱袋）</span><b id="incHabit">—</b>
           </div>
           <div class="income-row total">
             <span>这个月能决定的闲钱</span><b id="incFree">—</b>
@@ -241,6 +260,11 @@
         <div class="drawer-section" id="relationSection" hidden>
           <div class="drawer-title">身边的人</div>
           <div id="relationList"></div>
+        </div>
+
+        <div class="drawer-section" id="profileSection" hidden>
+          <div class="drawer-title">生活档案</div>
+          <div id="profileList"></div>
         </div>
 
         <div class="month-log" id="monthLogWrap" hidden>
