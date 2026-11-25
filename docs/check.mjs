@@ -48,14 +48,15 @@ for (const match of html.matchAll(/data-go="([^"]+)"/g)) {
   check(`data-go ${match[1]} 有目标屏`, screens.includes(match[1]))
 }
 
-// v3：每个月都有决策；特殊日子都有插画；四季背景齐全
+// v3：每个月都有决策；事件池按状态筛选；插画齐全
 check('月度决策：五类去向齐全', ['money', 'skill', 'memory', 'relation', 'freedom'].every((k) => js.includes(`key: '${k}'`)))
-const specialKeys = [...js.matchAll(/key: '([a-z0-9-]+)', kind:/g)].map((m) => m[1])
-check('特殊日子数量 ≥ 12', specialKeys.length >= 12, `实际 ${specialKeys.length}`)
+const poolCount = (js.match(/months: \[/g) || []).length
+check('事件池事件数 ≥ 18', poolCount >= 18, `实际 ${poolCount}`)
 const sceneBlock = (js.match(/var SCENES = \{([\s\S]*?)\n  \};/) || [])[1] || ''
 const sceneKeys = [...sceneBlock.matchAll(/'([a-z0-9-]+)':\s*'<svg/g)].map((m) => m[1])
-const missingScenes = specialKeys.filter((k) => !sceneKeys.includes(k) && k !== 'birthday')
-check('每个特殊日子都有插画', missingScenes.length === 0, missingScenes.join(', '))
+const sceneRefs = [...new Set([...js.matchAll(/scene: '([a-z0-9-]+)'/g)].map((m) => m[1]))]
+const missingScenes = sceneRefs.filter((k) => !sceneKeys.includes(k))
+check('每个事件的插画都存在', missingScenes.length === 0, missingScenes.join(', '))
 check('生日也有插画', sceneKeys.includes('birthday'))
 for (const s of ['spring', 'summer', 'autumn', 'winter']) {
   check(`季节背景 ${s}`, css.includes(`data-season="${s}"`))
@@ -126,6 +127,21 @@ check('余波按延迟月份触发', js.includes('accidentChoiceAt(') && js.incl
 check('硬扛生病后更容易再病', js.includes('before.weak') && js.includes('rate *= 2'))
 check('进入月份前的状态快照', js.includes('flagsAtMonth'))
 check('余波插画齐全', js.includes("'fu-phone':") && js.includes("'fu-weak':") && js.includes("'fu-delay':"))
+
+// v4：状态层 + 事件池 + 三维选项
+check('有状态层（学业/社交/经历/身体）', js.includes('var STAT_KEYS') && js.includes("study: '学业'") && js.includes("body: '身体'"))
+check('状态按月快照（保证回放确定）', js.includes('statsAtMonth'))
+check('选项分省钱/投资/关系', js.includes("save: '省钱'") && js.includes("invest: '投资'") && js.includes("relate: '关系'"))
+check('事件按状态筛选', js.includes('function candsFor') && js.includes('def.when'))
+check('有优先级分层', js.includes('tryBuildGroup') && js.includes('candsFor(mo, stats, m, year, 3, 99)'))
+check('大事件优先于生日', js.includes('// 3. 没有大事件，才轮到生日'))
+check('期末按学业分化', js.includes("s.study <= 3") && js.includes("s.study >= 7") && js.includes('奖学金'))
+check('社交低会触发宿舍事件', js.includes("s.social <= 3"))
+check('恋爱会触发约会事件', js.includes("key: 'dating'"))
+check('有跨年回调事件', js.includes('neverHomeFor3Years') && js.includes("key: 'callback-home'"))
+check('囤货会降低后续固定支出', js.includes('stockpileDiscount'))
+check('状态条 UI', html.includes('id="statStrip"') && css.includes('.stat-chip'))
+check('选项分类样式', css.includes('.opt-kind.save') && css.includes('.opt-kind.invest') && css.includes('.opt-kind.relate'))
 
 // 复利公式自检：与方案里的数字对齐
 const fvYearly = (p, r, n) => p * (Math.pow(1 + r, n) - 1) / r

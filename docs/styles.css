@@ -812,6 +812,46 @@ body[data-season="winter"] .season-layer i { background: #dfe9ef; border-radius:
   color: var(--jade);
 }
 
+/* 状态层：学业/社交/经历/身体 */
+.stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+}
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9px;
+  background: #f3ece1;
+  font-size: 11px;
+  color: #6b5c4b;
+}
+.stat-chip b {
+  font-variant-numeric: tabular-nums;
+  color: #4a4038;
+}
+.stat-chip.is-high { background: #eef4f1; color: var(--jade); }
+.stat-chip.is-low { background: #fdeceb; color: #b3402c; }
+
+/* 选项性质标签 */
+.opt-kind {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 1px 6px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 500;
+  vertical-align: 1px;
+}
+.opt-kind.save { background: #eef4f1; color: #3f6f66; }
+.opt-kind.invest { background: #eef1f8; color: #3f5f8f; }
+.opt-kind.relate { background: #fdf0e4; color: #a76a2c; }
+
 /* 意外概率说明（封面） */
 .rules-card {
   margin: 14px 0 4px;

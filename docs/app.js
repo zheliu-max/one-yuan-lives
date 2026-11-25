@@ -45,6 +45,8 @@
       eventCache: {},        // 月份索引 -> 生成的事件（确定性）
       relations: {},         // 朋友名字 -> 关系值
       flags: {},             // 意外留下的状态标记
+      stats: { study: 3, social: 3, exp: 3, body: 5 },   // 学业/社交/经历/身体
+      statsAtMonth: [],      // 进入每月之前的状态快照
       memories: [],          // 值得回看的记忆
       romance: null,         // 恋爱状态
       gearSet: {},           // 月份索引 -> 该月是否降档
@@ -135,10 +137,52 @@
       ? (downgraded ? profileFixedDowngraded() : profileFixed())
       : Math.round(state.budget * 0.55);
     if (typeof monthIndex !== 'number' || !state.profile) return base;
+    base = base - stockpileDiscount(monthIndex);
+    if (base < 300) base = 300;
     var rnd = monthRng(monthIndex);
     var wave = 1 + (rnd() - 0.5) * 0.16;   // 0.92 ~ 1.08
     return Math.round(base * wave / 10) * 10;
   }
+
+  /* ---------- 状态层：钱之外的四个维度 ---------- */
+
+  var STAT_KEYS = ['study', 'social', 'exp', 'body'];
+  var STAT_NAMES = { study: '学业', social: '社交', exp: '经历', body: '身体' };
+  var STAT_ICONS = { study: '📖', social: '🤝', exp: '🌍', body: '💪' };
+
+  function clampStat(v) { return Math.max(0, Math.min(10, Math.round(v * 10) / 10)); }
+
+  function blankStats() { return { study: 3, social: 3, exp: 3, body: 5 }; }
+
+  /** 进入某个月之前的状态快照（保证事件生成与回放确定）。 */
+  function statsBefore(monthIndex) {
+    var n = state.near;
+    if (n.statsAtMonth && n.statsAtMonth[monthIndex]) return n.statsAtMonth[monthIndex];
+    return n.stats || blankStats();
+  }
+
+  function addStats(delta) {
+    if (!delta) return;
+    var n = state.near;
+    STAT_KEYS.forEach(function (k) {
+      if (typeof delta[k] === 'number') n.stats[k] = clampStat(n.stats[k] + delta[k]);
+    });
+  }
+
+  /** 去年"囤货"带来的固定支出减免（连续 4 个月）。 */
+  function stockpileDiscount(monthIndex) {
+    var total = 0;
+    for (var k = 1; k <= 4; k++) {
+      var d = state.near.decisions[monthIndex - k];
+      if (d && d.eventChoice === 'stockpile') total += 60;
+    }
+    return Math.min(total, 240);
+  }
+
+  /* ---------- 事件池 ---------- */
+
+  /** 选项分三类：省钱 / 投资 / 关系。用于标签展示。 */
+  var OPT_TAGS = { save: '省钱', invest: '投资', relate: '关系' };
 
   // 学年方案：定一次，之后每月自动按它分配闲钱
   var PLANS = [
@@ -174,7 +218,7 @@
     { name: '小林', role: '室友', birthday: 3, base: 2 },
     { name: '阿哲', role: '室友', birthday: 10, base: 2 },
     { name: '张姐', role: '社团', birthday: 12, base: 1 },
-    { name: '老周', role: '高中同学', birthday: 2, base: 1 }
+    { name: '老周', role: '高中同学', birthday: 5, base: 1 }
   ];
 
   // 旅行目的地池（南京出发，真实价格）
@@ -272,7 +316,7 @@
 
   var ACCIDENTS = {
     phone: {
-      key: 'phone', name: '手机被偷', emoji: '📱', scene: 'phone',
+      key: 'phone', name: '手机被偷', emoji: '📱',
       text: '散场的人潮把你往外推。你再摸口袋，空了。',
       options: [
         { key: 'new', label: '买台新的', sub: '2,500 元 · 应急金见底', cost: 2500, pocket: 'freedom', memory: '手机被偷，换了新的' },
@@ -281,7 +325,7 @@
       ]
     },
     fraud: {
-      key: 'fraud', name: '电信诈骗', emoji: '⚠️', scene: 'fraud',
+      key: 'fraud', name: '电信诈骗', emoji: '⚠️',
       text: '“同学，刷单返利，一天三百。”你垫了 300，对方说再补 1,200 就能连本带利提现。',
       options: [
         { key: 'report', label: '立刻报警、冻结账户', sub: '损失 300 元 · 止住', cost: 300, pocket: 'freedom', memory: '被刷单诈骗 300' },
@@ -290,7 +334,7 @@
       ]
     },
     fail: {
-      key: 'fail', name: '挂科重修', emoji: '📉', scene: 'fail',
+      key: 'fail', name: '挂科重修', emoji: '📉',
       text: '成绩出来了。那门课挂了，补考也没过。教务系统里多了一行“重修”。',
       options: [
         { key: 'retake', label: '交钱重修', sub: '400 元 · 下学期重来', cost: 400, pocket: 'skill', memory: '挂了一门课，交钱重修' },
@@ -299,7 +343,7 @@
       ]
     },
     illness: {
-      key: 'illness', name: '生病住院', emoji: '🏥', scene: 'illness',
+      key: 'illness', name: '生病住院', emoji: '🏥',
       text: '换季那阵子，你的扁桃体先投降了。校医院说最好住院观察两天。',
       options: [
         { key: 'hospital', label: '住院两天', sub: '1,200 元 · 医保报销后自付', cost: 1200, pocket: 'freedom', memory: '住院两天' },
@@ -399,6 +443,8 @@
     n.relations = {};
     n.romance = null;
     n.flags = {};
+    n.stats = blankStats();
+    n.statsAtMonth = [];
     n.gearSet = computeGearSet();
     // 每年意外结果需要稳定：用固定种子重放，保证回看不乱跳
     var rnd = mulberry32(20260901 + (state.birthday || 6));
@@ -407,6 +453,7 @@
       // 记录"进入这个月之前"的状态标记（意外触发率要用它，且不能被本月结果污染）
       n.flagsAtMonth[m] = {};
       for (var fk in n.flags) { if (n.flags[fk]) n.flagsAtMonth[m][fk] = true; }
+      n.statsAtMonth[m] = { study: n.stats.study, social: n.stats.social, exp: n.stats.exp, body: n.stats.body };
       advanceNearMonth(m, rnd);
       var d = n.decisions[m];
       // 顺序很重要：先经历事件（花掉的钱从现金扣），再分配剩下的闲钱
@@ -976,8 +1023,9 @@
             '<p class="comp-hint">跟谁去，会影响花销，也可能影响遇见谁。</p>';
         }
         html += ev.options.map(function (o) {
+          var badge = o.kind ? '<span class="opt-kind ' + o.kind + '">' + (OPT_TAGS[o.kind] || '') + '</span>' : '';
           return '<button class="mini-btn' + (o.key === 'skip' ? ' no' : '') + '" data-ev="' + o.key + '">' +
-            '<b>' + o.label + '</b>' + (o.sub ? '<small>' + o.sub + '</small>' : '') + '</button>';
+            '<b>' + badge + o.label + '</b>' + (o.sub ? '<small>' + o.sub + '</small>' : '') + '</button>';
         }).join('');
         html += '<p class="comp-hint">这笔钱从本月闲钱里出，选完再看还剩多少。</p>';
         evBody.innerHTML = html;
@@ -1143,6 +1191,7 @@
     renderPockets();
     renderRelations();
     renderProfile();
+    renderStats();
     $('#narration').textContent = narrationNear(month, ev);
     $('#timeSlider').style.setProperty('--p', (month / (NEAR_MONTHS - 1) * 100) + '%');
 
@@ -1444,105 +1493,468 @@
     return ev;
   }
 
+  /**
+   * 事件池：每个事件声明"哪几个月可能出现"+"在什么状态下可能出现"。
+   * 生成时先按状态筛候选，再按优先级 + 月份种子挑一个。
+   * 这样同一个月份在不同状态下会遇到不同的事，重复感自然下降。
+   *
+   * 选项分三类：kind: 'save'（省钱）/ 'invest'（投资）/ 'relate'（关系），
+   * 除了钱，还会改变状态层（st）。
+   */
+  var EVENT_POOL = [
+    /* ---------- 学业线 ---------- */
+    {
+      months: [6, 1], priority: 3,
+      when: function (s) { return s.study <= 3; },
+      build: function (parts) {
+        return {
+          key: 'final', tag: '期末', date: parts.month + ' 月下旬', major: true, scene: 'final',
+          title: '这学期有点悬',
+          text: '两门课点名你都没到，作业拖到最后一天才交。期末周来了。',
+          options: [
+            { key: 'cram', kind: 'invest', label: '报个冲刺班', sub: '300 元 · 学业 +2', cost: 300, pocket: 'skill', st: { study: 2 }, memory: '期末报了冲刺班' },
+            { key: 'self', kind: 'save', label: '自己啃，通宵突击', sub: '0 元 · 学业 +0.5 · 身体 −1', cost: 0, st: { study: 0.5, body: -1 }, memory: '期末通宵突击' },
+            { key: 'giveup', kind: 'save', label: '摆烂，能过就过', sub: '0 元 · 学业 −1', cost: 0, st: { study: -1 }, memory: '期末摆烂了' }
+          ]
+        };
+      }
+    },
+    {
+      months: [6, 1], priority: 2,
+      when: function (s) { return s.study > 3 && s.study < 7; },
+      build: function (parts) {
+        return {
+          key: 'final', tag: '期末', date: parts.month + ' 月下旬', major: false, scene: 'final',
+          title: '期末周',
+          text: '该背的都背了，剩下的看状态。图书馆的位置得靠抢。',
+          options: [
+            { key: 'study', kind: 'invest', label: '泡图书馆两周', sub: '80 元 · 学业 +1.5 · 身体 −1', cost: 80, pocket: 'skill', st: { study: 1.5, body: -1 }, memory: '期末泡了两周图书馆' },
+            { key: 'normal', kind: 'save', label: '正常复习', sub: '0 元 · 学业 +0.5', cost: 0, st: { study: 0.5 }, memory: '期末正常复习' },
+            { key: 'slack', kind: 'save', label: '看情况，先玩两天', sub: '0 元 · 学业 −0.5 · 经历 +1', cost: 0, st: { study: -0.5, exp: 1 }, memory: '期末先玩了两天' }
+          ]
+        };
+      }
+    },
+    {
+      months: [6, 1], priority: 2,
+      when: function (s) { return s.study >= 7; },
+      build: function (parts) {
+        return {
+          key: 'scholar', tag: '奖学金', date: parts.month + ' 月', major: false, scene: 'final', noAccident: true,
+          title: '奖学金评选',
+          text: '成绩排在前面，辅导员问你要不要申请国家励志奖学金。材料不少。',
+          options: [
+            { key: 'apply', kind: 'invest', label: '认真准备材料', sub: '0 元 · 学业 +1 · 可能拿到 5,000', cost: 0, st: { study: 1 }, memory: '申请了奖学金', gain: 5000 },
+            { key: 'skip', kind: 'save', label: '太麻烦，不申', sub: '0 元', cost: 0 },
+            { key: 'share', kind: 'relate', label: '把名额让给室友', sub: '0 元 · 关系 +3', cost: 0, rel: 3, memory: '把奖学金名额让给了室友' }
+          ]
+        };
+      }
+    },
+    {
+      months: [12], priority: 2,
+      when: function (s, m, year) { return year >= 3; },
+      build: function (parts) {
+        return {
+          key: 'kaoyan', tag: '考研', date: '12 月下旬', major: true, scene: 'kaoyan',
+          title: '考研报名最后一天',
+          text: '江苏报名费 120 元。报不报，这是个岔路口。',
+          options: [
+            { key: 'full', kind: 'invest', label: '报名 + 冲刺班', sub: '620 元 · 学业 +2', cost: 620, pocket: 'skill', st: { study: 2 }, memory: '报名考研，还报了冲刺班' },
+            { key: 'signup', kind: 'invest', label: '只报名', sub: '120 元 · 学业 +0.5', cost: 120, pocket: 'skill', st: { study: 0.5 }, memory: '报了考研' },
+            { key: 'job', kind: 'save', label: '直接找工作', sub: '0 元 · 经历 +1', cost: 0, st: { exp: 1 }, memory: '没考研，直接找工作' }
+          ]
+        };
+      }
+    },
+    {
+      months: [12], priority: 1,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'cet', tag: '四六级', date: '12 月中旬', major: false, scene: 'cet',
+          title: '四六级报名',
+          text: '江苏笔试 30 元/人。过了六级，简历上能多写一行。',
+          options: [
+            { key: 'full', kind: 'invest', label: '报名 + 真题', sub: '80 元 · 学业 +1', cost: 80, pocket: 'skill', st: { study: 1 }, memory: '四六级认真准备了' },
+            { key: 'signup', kind: 'save', label: '只报名', sub: '30 元 · 学业 +0.3', cost: 30, pocket: 'skill', st: { study: 0.3 }, memory: '报了四六级' },
+            { key: 'skip', kind: 'save', label: '不考了', sub: '0 元 · 学业 −0.5', cost: 0, st: { study: -0.5 }, memory: '放弃四六级' }
+          ]
+        };
+      }
+    },
+
+    /* ---------- 钱线 ---------- */
+    {
+      months: [1], priority: 3,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'winter-home', tag: '寒假', date: '1 月中下旬', major: false, scene: 'winter-home',
+          title: '回家过年',
+          text: '南京南到家里的高铁。学生票一年只有 4 次，且限家—校区间。',
+          options: [
+            { key: 'hsr', kind: 'relate', label: '高铁回家', sub: '400 元 · 关系 +2', cost: 400, pocket: 'relation', rel: 2, st: { social: 1 }, memory: '坐高铁回家过年' },
+            { key: 'hard', kind: 'save', label: '12 小时硬座', sub: '200 元 · 关系 +1 · 身体 −1', cost: 200, pocket: 'relation', rel: 1, st: { body: -1 }, memory: '坐硬座回家' },
+            { key: 'stay', kind: 'save', label: '留校打工', sub: '0 元 · 经历 +1 · 关系 −2', cost: 0, st: { exp: 1, social: -1 }, rel: -2, memory: '寒假留校打工没回家' }
+          ]
+        };
+      }
+    },
+    {
+      months: [2], priority: 3,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'lucky-money', tag: '春节', date: '2 月中旬', major: false, scene: 'lucky-money',
+          title: '压岁钱怎么用',
+          text: '长辈给的 2,000 元压岁钱到账了。这是你一年里最大的一笔“横财”。',
+          options: [
+            { key: 'save', kind: 'save', label: '一分不动，全存起来', sub: '0 元 · 全进钱袋', cost: 0, memory: '压岁钱全存了' },
+            { key: 'family', kind: 'relate', label: '请家里人吃顿饭', sub: '300 元 · 关系 +3', cost: 300, pocket: 'relation', rel: 3, st: { social: 1 }, memory: '用压岁钱请家人吃饭' },
+            { key: 'want', kind: 'save', label: '买一直想要的东西', sub: '800 元 · 经历 +1', cost: 800, pocket: 'memory', st: { exp: 1 }, memory: '用压岁钱买了想要的东西' }
+          ]
+        };
+      }
+    },
+    {
+      months: [3, 9], priority: 2,
+      when: function () { return true; },
+      build: function (parts) {
+        var spring = parts.month === 3;
+        return {
+          key: spring ? 'newterm' : 'newterm2', tag: spring ? '春季开学' : '秋季开学',
+          date: parts.month + ' 月初', major: false, scene: spring ? 'newterm' : 'newterm2',
+          title: '开学采购',
+          text: '教材、打印、日用品。一学期 300 元起步，但怎么买是你的事。',
+          options: [
+            { key: 'full', kind: 'invest', label: '全新教材 + 新耳机', sub: '500 元 · 学业 +1', cost: 500, pocket: 'skill', st: { study: 1 }, memory: '开学买了全新教材' },
+            { key: 'used', kind: 'save', label: '二手教材', sub: '150 元 · 学业 +0.5', cost: 150, pocket: 'skill', st: { study: 0.5 }, memory: '开学买二手教材' },
+            { key: 'min', kind: 'save', label: '只买必须的', sub: '80 元 · 学业 −0.3', cost: 80, pocket: 'skill', st: { study: -0.3 }, memory: '开学只买了必需品' }
+          ]
+        };
+      }
+    },
+    {
+      months: [8], priority: 3,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'intern', tag: '实习', date: '8 月', major: false, scene: 'intern',
+          title: '实习工资到手',
+          text: '这个暑假你实习了，拿到 3,000 元。第一笔自己挣的钱。',
+          options: [
+            { key: 'all-save', kind: 'save', label: '全部存起来', sub: '0 元 · 全进钱袋', cost: 0, st: { study: 0.5 }, memory: '实习工资全存了' },
+            { key: 'treat', kind: 'relate', label: '请室友吃一顿', sub: '200 元 · 关系 +2', cost: 200, pocket: 'relation', rel: 2, st: { social: 1 }, memory: '用实习工资请了室友' },
+            { key: 'gear', kind: 'invest', label: '买个新键盘/显示器', sub: '600 元 · 学业 +1', cost: 600, pocket: 'skill', st: { study: 1 }, memory: '用工资升级了装备' }
+          ]
+        };
+      }
+    },
+    {
+      months: [11], priority: 3,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'double11', tag: '双十一', date: '11 月 11 日', major: false, scene: 'double11',
+          title: '双十一',
+          text: '购物车里躺了很多东西。今天不打折的东西，明天也不会打折。',
+          options: [
+            { key: 'stockpile', kind: 'save', label: '囤够一学期日用品', sub: '500 元 · 之后 4 个月固定支出 −60/月', cost: 500, pocket: 'relation', memory: '双十一囤了一学期日用品' },
+            { key: 'need', kind: 'save', label: '只买急用的', sub: '150 元', cost: 150, pocket: 'relation', memory: '双十一只买急用的' },
+            { key: 'none', kind: 'save', label: '什么都不买', sub: '0 元 · 关系 −1', cost: 0, rel: -1, memory: '双十一什么都没买' }
+          ]
+        };
+      }
+    },
+
+    /* ---------- 经历线 ---------- */
+    {
+      months: [7], priority: 3,
+      when: function () { return true; },
+      build: function (parts, stats, rnd) {
+        var companions = COMPANIONS.map(function (c) {
+          return { key: c.key, name: c.name, desc: c.desc, factor: c.factor, romance: rnd() < c.romance };
+        });
+        var places = TRAVEL_POOL.map(function (p) {
+          return {
+            key: 'go-' + p.key, label: p.name,
+            sub: p.cost ? fmtMoney(p.cost) + ' · ' + p.desc : p.desc,
+            cost: p.cost, pocket: 'memory', place: p.name, kind: p.cost ? 'relate' : 'save',
+            st: p.cost ? { exp: 2, body: -0.5 } : {},
+            memory: p.cost ? '去了' + p.name : '暑假留在家里'
+          };
+        });
+        return {
+          key: 'summer', tag: '暑假', date: '7 月', major: true,
+          title: '暑假到了',
+          text: '你攒了一个学期的旅行基金。跟谁去、去哪，都得自己定。',
+          scene: 'summer', companions: companions, options: places
+        };
+      }
+    },
+    {
+      months: [4, 9, 11], priority: 2,
+      when: function () { return true; },
+      build: function (parts, stats, rnd) {
+        if (rnd() >= 0.45) return null;
+        var artist = ARTISTS[Math.floor(rnd() * ARTISTS.length)];
+        var tiers = artist.tiers.map(function (t) {
+          return {
+            key: 'tier-' + t.zone, kind: 'relate',
+            label: t.zone + ' ' + (t.price ? fmtMoney(t.price) : '免费'),
+            sub: t.price ? '抢票（约 ' + Math.round((1 - artist.hot) * 100) + '% 抢到）' : '学校礼堂，随便进',
+            cost: t.price, pocket: 'memory', win: rnd() < (1 - artist.hot),
+            st: { exp: 1.5, social: 0.5 },
+            memory: '看了' + artist.name
+          };
+        });
+        return {
+          key: 'concert', tag: '演唱会', date: parts.month + ' 月周末', major: true,
+          title: artist.name + ' 来南京了',
+          text: '大麦 10:00 开票。你知道自己抢不过那两万人，但还是在电脑前坐好了。',
+          scene: 'concert', artist: artist, tiers: tiers,
+          scalper: { extra: 300, fake: rnd() < 0.15 },
+          options: tiers.concat([{ key: 'skip', kind: 'save', label: '算了，看直播', sub: '不花钱', cost: 0 }])
+        };
+      }
+    },
+    {
+      months: [4], priority: 1,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'qingming', tag: '清明', date: '4 月 4–6 日', major: false, scene: 'qingming',
+          title: '踏青',
+          text: '南京的春天只有几周。栖霞山或玄武湖，出门就是春天。',
+          options: [
+            { key: 'go', kind: 'relate', label: '去栖霞山', sub: '100 元 · 经历 +1', cost: 100, pocket: 'memory', st: { exp: 1 }, memory: '清明去了栖霞山' },
+            { key: 'city', kind: 'save', label: '市内逛逛', sub: '30 元 · 经历 +0.5', cost: 30, pocket: 'memory', st: { exp: 0.5 }, memory: '清明在市区转了转' },
+            { key: 'sleep', kind: 'save', label: '在宿舍躺着', sub: '0 元 · 身体 +1', cost: 0, st: { body: 1 }, memory: '清明在宿舍躺了两天' }
+          ]
+        };
+      }
+    },
+    {
+      months: [5], priority: 2,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'labour', tag: '五一', date: '5 月 1–5 日', major: false, scene: 'labour',
+          title: '五一去哪',
+          text: '五天假。出去玩、兼职、还是补觉，都可以。',
+          options: [
+            { key: 'trip', kind: 'relate', label: '去扬州两天', sub: '400 元 · 经历 +1.5', cost: 400, pocket: 'memory', st: { exp: 1.5, body: -0.5 }, memory: '五一去了扬州' },
+            { key: 'parttime', kind: 'invest', label: '兼职三天', sub: '赚 600 元 · 身体 −1', cost: 0, gain: 600, st: { body: -1, exp: 0.5 }, memory: '五一兼职赚了 600' },
+            { key: 'rest', kind: 'save', label: '在学校补觉', sub: '0 元 · 身体 +1', cost: 0, st: { body: 1 }, memory: '五一在学校补觉' }
+          ]
+        };
+      }
+    },
+    {
+      months: [10], priority: 1,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'autumn', tag: '国庆·秋游', date: '10 月 1–7 日', major: false, scene: 'autumn',
+          title: '栖霞山看红叶',
+          text: '旺季门票 50 元，学生半价 25。南京的秋天只有几周。',
+          options: [
+            { key: 'go', kind: 'relate', label: '约朋友一起去', sub: '80 元 · 经历 +1 · 关系 +1', cost: 80, pocket: 'memory', st: { exp: 1 }, rel: 1, memory: '国庆和朋友去看了红叶' },
+            { key: 'solo', kind: 'save', label: '一个人去', sub: '25 元 · 经历 +0.5', cost: 25, pocket: 'memory', st: { exp: 0.5 }, memory: '国庆一个人去看了红叶' },
+            { key: 'skip', kind: 'save', label: '人太多，不去', sub: '0 元', cost: 0, memory: '国庆没出门' }
+          ]
+        };
+      }
+    },
+    {
+      months: [6], priority: 3,
+      when: function (s, m, year) { return year >= 4; },
+      build: function (parts) {
+        return {
+          key: 'graduation', tag: '毕业季', date: '6 月下旬', major: true, scene: 'graduation',
+          title: '毕业季',
+          text: '最后一顿饭、最后一张合照。很多人会在这个月花掉一大笔。',
+          options: [
+            { key: 'trip', kind: 'relate', label: '毕业旅行', sub: '1,200 元 · 经历 +2 · 关系 +2', cost: 1200, pocket: 'memory', st: { exp: 2, social: 1 }, rel: 2, memory: '毕业旅行' },
+            { key: 'dinner', kind: 'relate', label: '送别饭', sub: '300 元 · 关系 +1.5', cost: 300, pocket: 'relation', rel: 1.5, st: { social: 1 }, memory: '请了送别饭' },
+            { key: 'save', kind: 'save', label: '不花这笔钱', sub: '0 元 · 关系 −1', cost: 0, rel: -1, memory: '毕业季没花钱' }
+          ]
+        };
+      }
+    },
+
+    /* ---------- 社交线 ---------- */
+    {
+      months: [10], priority: 2,
+      when: function (s, m, year) { return year <= 2; },
+      build: function (parts) {
+        return {
+          key: 'club', tag: '社团', date: '10 月', major: false, scene: 'newterm',
+          title: '社团招新',
+          text: '操场上摆满了摊位。加一个社团，可能会认识一群人。',
+          options: [
+            { key: 'join', kind: 'relate', label: '加一个，交会费', sub: '100 元 · 社交 +1.5 · 经历 +0.5', cost: 100, pocket: 'relation', st: { social: 1.5, exp: 0.5 }, memory: '加入了社团' },
+            { key: 'free', kind: 'save', label: '加个免费的', sub: '0 元 · 社交 +0.5', cost: 0, st: { social: 0.5 }, memory: '加入了免费的社团' },
+            { key: 'none', kind: 'save', label: '不感兴趣', sub: '0 元 · 学业 +0.5', cost: 0, st: { study: 0.5 }, memory: '没加社团' }
+          ]
+        };
+      }
+    },
+    {
+      months: [12], priority: 1,
+      when: function () { return true; },
+      build: function (parts) {
+        return {
+          key: 'newyear', tag: '跨年', date: '12 月 31 日', major: false, scene: 'newyear',
+          title: '跨年',
+          text: '朋友约你跨年，人均 300 元。你也可以一个人在宿舍看直播。',
+          options: [
+            { key: 'party', kind: 'relate', label: '和朋友一起跨年', sub: '300 元 · 社交 +1.5', cost: 300, pocket: 'relation', st: { social: 1.5 }, rel: 1, memory: '和朋友一起跨年' },
+            { key: 'home', kind: 'relate', label: '回家陪家人', sub: '200 元 · 关系 +1 · 身体 +0.5', cost: 200, pocket: 'relation', rel: 1, st: { body: 0.5 }, memory: '回家跨年' },
+            { key: 'alone', kind: 'save', label: '一个人在宿舍', sub: '0 元 · 经历 −0.5', cost: 0, st: { exp: -0.5 }, memory: '一个人跨年' }
+          ]
+        };
+      }
+    },
+    {
+      months: [3, 4, 9, 10, 11, 12, 1, 2, 5, 6, 7, 8], priority: 1,
+      when: function (s) { return s.social <= 3; },
+      build: function (parts) {
+        return {
+          key: 'dorm', tag: '宿舍', date: parts.month + ' 月', major: false, scene: 'birthday',
+          title: '宿舍有点冷',
+          text: '室友最近不怎么跟你说话。你也说不清是从哪件事开始的。',
+          options: [
+            { key: 'talk', kind: 'relate', label: '主动坐下来聊聊', sub: '0 元 · 社交 +1.5', cost: 0, rel: 1.5, st: { social: 1.5 }, memory: '主动和解了宿舍关系' },
+            { key: 'meal', kind: 'relate', label: '请他们吃顿夜宵', sub: '120 元 · 社交 +2', cost: 120, pocket: 'relation', rel: 2, st: { social: 2 }, memory: '请室友吃夜宵和好' },
+            { key: 'ignore', kind: 'save', label: '算了，各过各的', sub: '0 元 · 社交 −1', cost: 0, st: { social: -1 }, memory: '和室友渐行渐远' }
+          ]
+        };
+      }
+    },
+    {
+      months: [3, 4, 5, 9, 10, 11, 12, 1, 2, 6, 7, 8], priority: 2,
+      when: function (s) { return !!state.near.romance; },
+      build: function (parts) {
+        var name = (state.near.romance && state.near.romance.name) || '阿青';
+        return {
+          key: 'dating', tag: '恋爱', date: parts.month + ' 月', major: false, scene: 'birthday',
+          title: '这个月的约会',
+          text: name + '问你周末有没有空。',
+          options: [
+            { key: 'date', kind: 'relate', label: '出去约会', sub: '150 元 · 关系 +1.5', cost: 150, pocket: 'relation', rel: 1.5, st: { exp: 0.5 }, memory: '和' + name + '约会' },
+            { key: 'cheap', kind: 'save', label: '在学校走走', sub: '0 元 · 关系 +0.8', cost: 0, rel: 0.8, memory: '和' + name + '在校园里散步' },
+            { key: 'busy', kind: 'invest', label: '说忙，要复习', sub: '0 元 · 学业 +1 · 关系 −1.5', cost: 0, st: { study: 1 }, rel: -1.5, memory: '为了复习推掉了约会' }
+          ]
+        };
+      }
+    },
+    {
+      months: [1], priority: 4,
+      when: function (s, m) { return neverHomeFor3Years(m); },
+      build: function (parts) {
+        return {
+          key: 'callback-home', tag: '回望', date: '1 月', major: false, scene: 'winter-home',
+          title: '家里问你：今年回不回？',
+          text: '你已经连着三年寒假没回家了。电话那头沉默了一会儿。',
+          options: [
+            { key: 'go', kind: 'relate', label: '这次回去', sub: '400 元 · 关系 +4', cost: 400, pocket: 'relation', rel: 4, st: { social: 1 }, memory: '三年后终于回家过年' },
+            { key: 'call', kind: 'save', label: '回不去，多打几个电话', sub: '0 元 · 关系 +1', cost: 0, rel: 1, memory: '只给家里打了电话' },
+            { key: 'ignore', kind: 'save', label: '继续不回', sub: '0 元 · 关系 −3', cost: 0, rel: -3, memory: '还是没回家' }
+          ]
+        };
+      }
+    }
+  ];
+
+  /** 连续三年寒假都没回家（留校打工那条路走到底）。 */
+  function neverHomeFor3Years(monthIndex) {
+    var cnt = 0;
+    for (var k = 1; k <= 3; k++) {
+      var m = monthIndex - k * 12;
+      if (m < 0) return false;
+      var d = state.near.decisions[m];
+      if (d && d.eventChoice === 'stay') cnt++;
+    }
+    return cnt >= 3;
+  }
+
   function buildEvent(m) {
     var parts = monthParts(m);
     var rnd = monthRng(m);
+    var stats = statsBefore(m);
+    var mo = parts.month;
+    var year = yearIndex(m) + 1;
 
-    // 玩家自己的生日优先
-    if (state.birthday && parts.month === Number(state.birthday)) {
-      return {
-        key: 'birthday', tag: '生日', date: parts.month + ' 月', major: true,
-        title: '你的生日', text: '生日这个月，你会请朋友吃顿饭，也会收到一点祝福。',
-        scene: 'birthday',
-        options: [
-          { key: 'yes', label: '请大家吃顿饭', sub: '花 300 元，关系 +2', cost: 300, pocket: 'relation', rel: 2, memory: '生日请了大家' },
-          { key: 'skip', label: '自己过', sub: '省钱，也清静', cost: 0, memory: '生日一个人过' }
-        ]
-      };
-    }
-
-    // 余波优先：几个月前那次意外的账，现在回来找你
+    // 1. 余波最高优先
     var fu = followupFor(m);
     if (fu) return fu;
 
-    // 朋友生日
-    var friend = FRIENDS.filter(function (f) { return f.birthday === parts.month; })[0];
-    if (friend) {
-      return {
-        key: 'friend-' + friend.name, tag: '生日会', date: parts.month + ' 月', major: false,
-        title: friend.name + ' 过生日',
-        text: '你的' + friend.role + friend.name + '要过生日了。去不去、送什么，都算一次表态。',
-        scene: 'birthday', friend: friend,
-        options: [
-          { key: 'meal', label: '请他吃顿饭', sub: '200 元 · 关系 +2', cost: 200, pocket: 'relation', rel: 2, memory: '给' + friend.name + '过生日' },
-          { key: 'gift', label: '送个礼物', sub: '150 元 · 关系 +1.5', cost: 150, pocket: 'relation', rel: 1.5, memory: '送了' + friend.name + '礼物' },
-          { key: 'redpack', label: '发个红包', sub: '66 元 · 关系 +0.5', cost: 66, pocket: 'relation', rel: 0.5 },
-          { key: 'skip', label: '装作不知道', sub: '不花钱 · 关系 −2', cost: 0, rel: -2, memory: '错过了' + friend.name + '的生日' }
-        ]
-      };
-    }
+    // 2. 优先级 3 的大事件先挑（暑假 / 寒假 / 春节 / 双十一 / 实习 / 毕业 / 期末）
+    var high = tryBuildGroup(candsFor(mo, stats, m, year, 3, 99), parts, stats, rnd, m, year);
+    if (high) return high;
 
-    // 演唱会
-    if ([4, 9, 11].indexOf(parts.month) >= 0 && rnd() < 0.6) {
-      var artist = ARTISTS[Math.floor(rnd() * ARTISTS.length)];
-      var tiers = artist.tiers.map(function (t) {
-        return {
-          key: 'tier-' + t.zone, label: t.zone + ' ' + (t.price ? fmtMoney(t.price) : '免费'),
-          sub: t.price ? '抢票（约 ' + Math.round((1 - artist.hot) * 100) + '% 抢到）' : '学校礼堂，随便进',
-          cost: t.price, pocket: 'memory', win: rnd() < (1 - artist.hot),
-          memory: '看了' + artist.name
-        };
-      });
-      return {
-        key: 'concert', tag: '演唱会', date: parts.month + ' 月周末', major: true,
-        title: artist.name + ' 来南京了',
-        text: '大麦 10:00 开票。你知道自己抢不过那两万人，但还是在电脑前坐好了。',
-        scene: 'concert', artist: artist, tiers: tiers,
-        scalper: { extra: 300, fake: rnd() < 0.15 },
-        options: tiers.concat([{ key: 'skip', label: '算了，看直播', sub: '不花钱', cost: 0 }])
-      };
-    }
+    // 3. 没有大事件，才轮到生日
+    if (state.birthday && mo === Number(state.birthday)) return birthdayEvent(mo);
+    var friend = FRIENDS.filter(function (f) { return f.birthday === mo; })[0];
+    if (friend && rnd() < 0.55) return friendBirthdayEvent(friend, mo);
 
-    // 暑假旅行
-    if (parts.month === 7) {
-      var companions = COMPANIONS.map(function (c) {
-        return { key: c.key, name: c.name, desc: c.desc, factor: c.factor, romance: rnd() < c.romance };
-      });
-      var places = TRAVEL_POOL.map(function (p) {
-        return {
-          key: 'go-' + p.key, label: p.name,
-          sub: p.cost ? fmtMoney(p.cost) + ' · ' + p.desc : p.desc,
-          cost: p.cost, pocket: 'memory', place: p.name,
-          memory: p.cost ? '去了' + p.name : '暑假留在家里'
-        };
-      });
-      return {
-        key: 'summer', tag: '暑假', date: '7 月', major: true,
-        title: '暑假到了',
-        text: '你攒了一个学期的旅行基金。跟谁去、去哪，都得自己定。',
-        scene: 'summer', companions: companions, options: places
-      };
-    }
-
-    // 静态校历
-    var s = SPECIAL_DAYS.filter(function (x) { return x.month === parts.month; })[0];
-    return s ? normalizeStatic(s) : null;
+    // 4. 其余普通事件
+    return tryBuildGroup(candsFor(mo, stats, m, year, 1, 2), parts, stats, rnd, m, year);
   }
 
-  /** 把静态校历事件转成统一的选项模型。 */
-  function normalizeStatic(s) {
-    if (s.kind === 'gain') {
-      return { key: s.key, tag: s.tag, date: s.date, title: s.title, text: s.text, scene: s.key, gain: s.amount, options: [] };
+  /** 按月份 + 状态 + 优先级区间筛候选。 */
+  function candsFor(mo, stats, m, year, minP, maxP) {
+    var out = [];
+    EVENT_POOL.forEach(function (def) {
+      var pr = def.priority || 1;
+      if (pr < minP || pr > maxP) return;
+      if (def.months && def.months.indexOf(mo) < 0) return;
+      if (def.when && !def.when(stats, m, year)) return;
+      out.push(def);
+    });
+    return out;
+  }
+
+  /** 组内按月份种子洗牌后依次尝试构建。 */
+  function tryBuildGroup(group, parts, stats, rnd, m, year) {
+    for (var i = group.length - 1; i > 0; i--) {
+      var j = Math.floor(rnd() * (i + 1));
+      var t = group[i]; group[i] = group[j]; group[j] = t;
     }
-    if (s.kind === 'info') {
-      return { key: s.key, tag: s.tag, date: s.date, title: s.title, text: s.text, scene: s.key, info: true, options: [] };
+    for (var k = 0; k < group.length; k++) {
+      var ev = typeof group[k].build === 'function'
+        ? group[k].build(parts, stats, rnd, m, year)
+        : group[k].build;
+      if (ev) return ev;
     }
+    return null;
+  }
+
+  function birthdayEvent(mo) {
     return {
-      key: s.key, tag: s.tag, date: s.date, title: s.title, text: s.text, scene: s.key,
-      major: s.major === true,
+      key: 'birthday', tag: '生日', date: mo + ' 月', major: true, scene: 'birthday',
+      title: '你的生日', text: '生日这个月，你可以请朋友吃顿饭，也可以自己过。',
       options: [
-        { key: 'yes', label: '花 ' + fmtMoney(s.cost) + '，' + s.title, sub: '钱换来这段经历', cost: s.cost, pocket: s.pocket, memory: s.title },
-        { key: 'skip', label: '算了', sub: '省下这笔', cost: 0, memory: '放弃了' + s.title }
+        { key: 'yes', kind: 'relate', label: '请大家吃顿饭', sub: '300 元 · 社交 +2', cost: 300, pocket: 'relation', rel: 2, st: { social: 2 }, memory: '生日请了大家' },
+        { key: 'small', kind: 'relate', label: '只叫最好的几个', sub: '120 元 · 社交 +1', cost: 120, pocket: 'relation', rel: 1, st: { social: 1 }, memory: '生日只叫了几个朋友' },
+        { key: 'skip', kind: 'save', label: '自己过', sub: '0 元 · 省钱，也清静', cost: 0, memory: '生日一个人过' }
+      ]
+    };
+  }
+
+  function friendBirthdayEvent(friend, mo) {
+    return {
+      key: 'friend-' + friend.name, tag: '生日会', date: mo + ' 月', major: false,
+      title: friend.name + ' 过生日',
+      text: '你的' + friend.role + friend.name + '要过生日了。去不去、送什么，都算一次表态。',
+      scene: 'birthday', friend: friend,
+      options: [
+        { key: 'meal', kind: 'relate', label: '请他吃顿饭', sub: '200 元 · 关系 +2', cost: 200, pocket: 'relation', rel: 2, st: { social: 1 }, memory: '给' + friend.name + '过生日' },
+        { key: 'gift', kind: 'relate', label: '送个礼物', sub: '150 元 · 关系 +1.5', cost: 150, pocket: 'relation', rel: 1.5, st: { social: 0.5 }, memory: '送了' + friend.name + '礼物' },
+        { key: 'redpack', kind: 'save', label: '发个红包', sub: '66 元 · 关系 +0.5', cost: 66, pocket: 'relation', rel: 0.5 },
+        { key: 'skip', kind: 'save', label: '装作不知道', sub: '0 元 · 关系 −2', cost: 0, rel: -2, st: { social: -1 }, memory: '错过了' + friend.name + '的生日' }
       ]
     };
   }
@@ -1639,7 +2051,7 @@
         }
       }
       else if (ev.key === 'winter-home' && dk === 'yes') scene = 'phone';
-      else if (ev.key === 'final') scene = 'fail';
+      else if (ev.key === 'final' && !ev.noAccident) scene = 'fail';
       else if (ev.key === 'newterm2' || ev.key === 'intern') scene = 'fraud';
     }
     // 换季：没人安排，但身体会
@@ -1776,14 +2188,19 @@
     // 通用
     var cost2 = opt.cost || 0;
     if (cost2 > 0) spendCash(cost2);
+    if (opt.gain) {
+      n.cash += opt.gain;
+      n.events.push({ t: ev.title + '（收入）', y: y, m: mo, amt: opt.gain, note: '到账', special: ev.key });
+    }
     if (opt.rel) addRelation(ev.friend ? ev.friend.name : '朋友', opt.rel);
+    if (opt.st) addStats(opt.st);
     // 求情类的赌一把：过了就清掉延期标记
     if (typeof opt.gamblePass === 'number') {
       if (accidentRng(monthIndex + 900)() <= opt.gamblePass) n.flags[opt.clearFlag || 'delay'] = false;
     }
     if (opt.flag) n.flags[opt.flag] = true;
     if (opt.clearFlag) n.flags[opt.clearFlag] = false;
-    if (opt.memory && (cost2 > 0 || opt.flag || opt.clearFlag)) {
+    if (opt.memory && (cost2 > 0 || opt.flag || opt.clearFlag || opt.st)) {
       n.memories.push({ text: opt.memory, y: y, m: mo });
     }
     n.events.push({
@@ -1928,6 +2345,19 @@
       html += '<div class="rel-row"><span>💗 和阿青在一起（第 ' + romance.year + ' 年 ' + romance.month + ' 月起）</span><b>恋爱中</b></div>';
     }
     list.innerHTML = html;
+  }
+
+  /** 状态层：学业 / 社交 / 经历 / 身体。 */
+  function renderStats() {
+    var strip = $('#statStrip');
+    if (!strip) return;
+    var s = state.near.stats || blankStats();
+    strip.innerHTML = STAT_KEYS.map(function (k) {
+      var v = s[k];
+      var cls = v >= 7 ? ' is-high' : (v <= 2 ? ' is-low' : '');
+      return '<span class="stat-chip' + cls + '">' + STAT_ICONS[k] + ' ' + STAT_NAMES[k] +
+        ' <b>' + v.toFixed(1) + '</b></span>';
+    }).join('');
   }
 
   /** 生活档案（固定支出的来源）。 */
@@ -2658,7 +3088,7 @@
     state.budget = 1800; state.amount = 15; state.habit = 5;
     state.pace = 'monthly'; state.timelineMode = 'near'; state.slider = 0;
     state.rate = 0.08; state.inflation = false;
-    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], decisions: {}, plans: {}, eventCache: {}, relations: {}, flags: {}, memories: [], romance: null, gearSet: {}, baseline: null, monthLog: [], done84: false };
+    state.near = { money: 0, skill: 0, memory: 0, relation: 0, freedom: 0, cash: 0, events: [], decisions: {}, plans: {}, eventCache: {}, relations: {}, flags: {}, stats: { study: 3, social: 3, exp: 3, body: 5 }, statsAtMonth: [], memories: [], romance: null, gearSet: {}, baseline: null, monthLog: [], done84: false };
     state.far = { actual: 0, ideal: 0, zero: 0, years: 0, series: { actual: [], ideal: [], zero: [] } };
     $('#inflationToggle').checked = false;
     $$('.chip').forEach(function (c) { c.classList.remove('is-on'); });
